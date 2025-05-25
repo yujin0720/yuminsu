@@ -1,0 +1,44 @@
+# Flutter/Dart 관련
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.symbols
+*.map.json
+*.pdb
+
+# IDE 및 설정 관련
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+out/
+
+# 캐시 및 임시 파일
+*.log
+*.pyc
+*.swp
+.DS_Store
+**/__pycache__/
+
+# iOS/macOS 관련
+**/Flutter/ephemeral/
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+**/Runner.xcworkspace/
+**/Pods/
+ios/Flutter/.last_build_id
+
+# Web platform
+/web/.dart_tool/
+/web/build/
+
+# Windows/macOS/Linux platform
+windows/**/Debug/
+windows/flutter/ephemeral/
+macos/Flutter/ephemeral/
+linux/**/Debug/

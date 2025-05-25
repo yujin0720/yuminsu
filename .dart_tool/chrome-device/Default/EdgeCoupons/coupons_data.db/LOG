@@ -1,0 +1,21 @@
+2025/04/30-16:09:44.799 15d0 Reusing MANIFEST C:\Users\sumin\AppData\Local\Temp\flutter_tools.88bc2d30\flutter_tools_chrome_device.44e76de2\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2025/04/30-16:09:44.801 15d0 Recovering log #30
+2025/04/30-16:09:44.801 15d0 Reusing old log C:\Users\sumin\AppData\Local\Temp\flutter_tools.88bc2d30\flutter_tools_chrome_device.44e76de2\Default\EdgeCoupons/coupons_data.db/000030.log 
+2025/04/30-16:09:44.804 15d0 Delete type=0 #4
+2025/04/30-16:09:44.807 15d0 Delete type=0 #7
+2025/04/30-16:09:44.807 15d0 Delete type=2 #8
+2025/04/30-16:09:44.807 15d0 Delete type=2 #10
+2025/04/30-16:09:44.807 15d0 Delete type=0 #10
+2025/04/30-16:09:44.808 15d0 Delete type=2 #11
+2025/04/30-16:09:44.809 15d0 Delete type=0 #11
+2025/04/30-16:09:44.811 15d0 Delete type=2 #12
+2025/04/30-16:09:44.811 15d0 Delete type=0 #14
+2025/04/30-16:09:44.812 15d0 Delete type=2 #15
+2025/04/30-16:09:44.812 15d0 Delete type=0 #17
+2025/04/30-16:09:44.812 15d0 Delete type=0 #21
+2025/04/30-16:09:44.815 15d0 Delete type=0 #24
+2025/04/30-16:09:44.815 15d0 Delete type=0 #27
+2025/04/30-16:09:44.815 15d0 Delete type=2 #32
+2025/04/30-16:09:44.826 4bec Compacting 4@0 + 1@1 files
+2025/04/30-16:09:44.829 4bec compacted to: files[ 4 1 1 0 0 0 0 ]
+2025/04/30-16:09:44.829 4bec Compaction error: Corruption: not an sstable (bad magic number)
