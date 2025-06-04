@@ -605,93 +605,100 @@ class HomePageState extends State<HomePage> {
 
   
 
-
-  double _calculateTodayStudyRatio() {
-    const goalMinutes = 240; // 목표 시간 (4시간)
-    return (todayMinutes / goalMinutes).clamp(0.0, 1.0);
-  }
-
-  double _calculateWeeklyStudyRatio() {
-    const dailyGoal = 240; // 하루 4시간
-    final weeklyGoal = dailyGoal * 7; // 주간 목표 시간: 1680분
-    return (weeklyMinutes / weeklyGoal).clamp(0.0, 1.0);
-  }
-
-  Widget _buildTodoAndWeeklySection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 왼쪽: 할 일 카드들
-        Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              _buildTodoCard(
-                title: "오늘 할 일",
-                child: ExpansionTile(
-                  title: Text(
-                    "",
-                    style: GoogleFonts.notoSansKr(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                      color: const Color(0xFF263238),
-                    ),
+Widget _buildTodoAndWeeklySection() {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // 왼쪽: 할 일 카드들
+      Expanded(
+        flex: 3,
+        child: Column(
+          children: [
+            _buildTodoCard(
+              title: "오늘 할 일",
+              child: ExpansionTile(
+                title: Text(
+                  "",
+                  style: GoogleFonts.notoSansKr(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: const Color(0xFF263238),
                   ),
-                  initiallyExpanded: true,
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 8),
-                  children: [
-                    todayTodos.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text("오늘은 계획된 Todo가 없습니다!", style: TextStyle(fontSize: 14)),
-                          )
-                        : Column(
-                            children: todayTodos.map((todo) => _buildStyledTodoTile(todo)).toList(),
-                          ),
-                  ],
                 ),
+                initiallyExpanded: true,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+                children: [
+                  todayTodos.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text("오늘은 계획된 Todo가 없습니다!", style: TextStyle(fontSize: 14)),
+                        )
+                      : Column(
+                          children: todayTodos.map((todo) => _buildStyledTodoTile(todo)).toList(),
+                        ),
+                ],
               ),
-              const SizedBox(height: 20),
-              _buildTodoCard(
-                title: "주간 할 일",
-                child: Column(
-                  children: weeklyTodos.entries.map(
-                    (entry) => ExpansionTile(
-                      title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      children: entry.value.map((todo) => _buildStyledTodoTile(todo)).toList(),
-                    ),
-                  ).toList(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        // 오른쪽: 도넛 카드
-        Expanded(
-          flex: 2,
-          child: _buildTodoCard(
-            title: "학습 통계",
-            child: GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1,
-              children: [
-                _buildDonutCard("오늘 공부 달성률", _calculateTodayPercent(), "${(_calculateTodayPercent() * 100).toStringAsFixed(1)}%"),
-                _buildDonutCard("오늘 공부 시간", _calculateTodayStudyRatio(), _minutesToHourMin(todayMinutes)),
-                _buildDonutCard("주간 목표 달성률", _calculateWeeklyPercent(), "${(_calculateWeeklyPercent() * 100).toStringAsFixed(1)}%"),
-                _buildDonutCard("이번주 공부 시간", _calculateWeeklyStudyRatio(), _minutesToHourMin(weeklyMinutes)),
-              ],
             ),
-          ),
+            const SizedBox(height: 20),
+            _buildTodoCard(
+              title: "주간 할 일",
+              child: Column(
+                children: weeklyTodos.entries.map(
+                  (entry) => ExpansionTile(
+                    title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    children: entry.value.map((todo) => _buildStyledTodoTile(todo)).toList(),
+                  ),
+                ).toList(),
+              ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(width: 16),
+
+      // 오른쪽: 학습 통계 도넛 카드 (Consumer로 연동)
+      Expanded(
+        flex: 2,
+        child: Consumer<TimerProvider>(
+          builder: (context, timer, _) {
+            final today = ['월', '화', '수', '목', '금', '토', '일'][DateTime.now().weekday - 1];
+            final todayStudyMin = timer.weeklyStudy[today]?.inMinutes ?? 0;
+            final weeklyStudyMin = timer.weeklyStudy.values
+                .fold<int>(0, (sum, d) => sum + d.inMinutes);
+
+            double calculatePercent(int value, int goal) =>
+                (value / goal).clamp(0.0, 1.0);
+
+            String formatMinutes(int minutes) {
+              final h = (minutes ~/ 60).toString();
+              final m = (minutes % 60).toString().padLeft(2, '0');
+              return '${h}H${m}M';
+            }
+
+            return _buildTodoCard(
+              title: "학습 통계",
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1,
+                children: [
+                  _buildDonutCard("오늘 공부 달성률", calculatePercent(todayStudyMin, 240), "${(calculatePercent(todayStudyMin, 240) * 100).toStringAsFixed(1)}%"),
+                  _buildDonutCard("오늘 공부 시간", calculatePercent(todayStudyMin, 240), formatMinutes(todayStudyMin)),
+                  _buildDonutCard("주간 목표 달성률", calculatePercent(weeklyStudyMin, 1680), "${(calculatePercent(weeklyStudyMin, 1680) * 100).toStringAsFixed(1)}%"),
+                  _buildDonutCard("이번주 공부 시간", calculatePercent(weeklyStudyMin, 1680), formatMinutes(weeklyStudyMin)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
 
 
 
