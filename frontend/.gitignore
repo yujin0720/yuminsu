@@ -1,44 +1,45 @@
-# Flutter/Dart 관련
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-*.symbols
-*.map.json
-*.pdb
-
-# IDE 및 설정 관련
-.idea/
-.vscode/
-*.iml
-*.ipr
-*.iws
-out/
-
-# 캐시 및 임시 파일
+# Miscellaneous
+*.class
 *.log
 *.pyc
 *.swp
 .DS_Store
-**/__pycache__/
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# iOS/macOS 관련
-**/Flutter/ephemeral/
-**/Flutter/Generated.xcconfig
-**/Flutter/flutter_export_environment.sh
-**/Runner.xcworkspace/
-**/Pods/
-ios/Flutter/.last_build_id
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
 
-# Web platform
-/web/.dart_tool/
-/web/build/
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
 
-# Windows/macOS/Linux platform
-windows/**/Debug/
-windows/flutter/ephemeral/
-macos/Flutter/ephemeral/
-linux/**/Debug/
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

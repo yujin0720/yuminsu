@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_page.dart';
-
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PasswordCheckPage extends StatefulWidget {
   const PasswordCheckPage({super.key});
@@ -13,32 +15,62 @@ class _PasswordCheckPageState extends State<PasswordCheckPage> {
   final TextEditingController passwordController = TextEditingController();
   bool isObscure = true;
 
-  void _submitPassword() {
-    String password = passwordController.text.trim();
+  Future<void> _submitPassword() async {
+    final password = passwordController.text.trim();
 
-    // TODO: 백엔드와 연동하여 비밀번호 검증
-    if (password == '1234') {
-      // 예: 검증 성공 시 회원정보 수정 페이지로 이동
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const EditProfilePage()),
+    if (password.isEmpty) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('accessToken');
+
+      if (accessToken == null) {
+        _showDialog('오류', '로그인 정보가 없습니다.');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('http://192.168.35.189:8000/user/verify-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'password': password}),
       );
-    } else {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('비밀번호 불일치'),
-          content: const Text('비밀번호가 올바르지 않습니다.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('확인'),
-            ),
-          ],
-        ),
-      );
+
+      if (response.statusCode == 200) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const EditProfilePage()),
+        ).then((result) {
+          if (result == true) {
+            Navigator.pop(context, true); // 다시 MyPage로 pop + true 전달
+          }
+        });
+      } else {
+        _showDialog('비밀번호 불일치', '비밀번호가 올바르지 않습니다.');
+      }
+    } catch (e) {
+      _showDialog('오류', '서버 요청 중 문제가 발생했습니다: $e');
     }
   }
+
+  void _showDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
