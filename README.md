@@ -40,7 +40,7 @@ Flutter로 구현된 클라이언트 앱으로, 사용자 인터페이스를 통
 - `.gitignore`: Git에 포함시키지 않을 파일 정의  
 - `.metadata`: Flutter에서 내부적으로 사용하는 메타데이터  
 - `README.md`: 프로젝트 설명 문서  
-- `analysis_options.yaml`: Dart 분석기 설정 (Lint 규칙 등)  
-- `pubspec.yaml`: 프로젝트 의존성 및 설정 정의 (가장 중요함)  
+- `analysis_options.yaml`: Dart 분석기 설정  
+- `pubspec.yaml`: 프로젝트 의존성 및 설정 정의  
 - `pubspec.lock`: 실제로 설치된 의존성의 버전이 기록된 파일 (자동 생성)
 
