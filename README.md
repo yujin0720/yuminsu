@@ -11,8 +11,10 @@
   <img src="https://img.shields.io/badge/Language-Python-yellow?logo=python" alt="Python">
   <img src="https://img.shields.io/badge/API-OpenAI-ff69b4?logo=openai" alt="OpenAI API">
 </p>
+
 ---
-## 프로젝트 설명
+
+## 프로젝트 소개
 
 iPlanner는 학습자 맞춤형 계획 수립과 실시간 학습 관리를 지원하는 AI 기반 학습 플래너 애플리케이션입니다.
 
