@@ -1,5 +1,7 @@
 # yuminsu
 
+## backend
+
 ## frontend
 
 Flutter로 개발한 앱입니다. 아래는 `frontend` 디렉토리 내 주요 폴더 및 파일 설명입니다.
