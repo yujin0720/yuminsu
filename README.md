@@ -1,6 +1,6 @@
 # yuminsu
 
-<img src="frontend/assets/logo1.png" alt="iPlanner 로고" width="200"/>
+<img src="frontend/assets/logo2.png" alt="iPlanner 로고" width="200"/>
 
 
 # 📚 iPlanner – AI 기반 개인 학습 플래너
