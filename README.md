@@ -9,6 +9,9 @@
   <img src="https://img.shields.io/github/license/yujin0720/yuminsu.svg" alt="License: MIT">
   <img src="https://img.shields.io/badge/Built%20with-Flutter-blue?logo=flutter" alt="Flutter">
   <img src="https://img.shields.io/badge/Backend-FastAPI-green?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Database-MySQL-blue?logo=mysql" alt="MySQL">
+  <img src="https://img.shields.io/badge/Language-Python-yellow?logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/API-OpenAI-ff69b4?logo=openai" alt="OpenAI API">
 </p>
 
 # 📚 iPlanner – AI 기반 개인 학습 플래너
