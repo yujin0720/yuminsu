@@ -1,4 +1,4 @@
-# 📚 iPlanner – AI 기반 개인 학습 플래너
+#  iPlanner – AI 기반 개인 학습 플래너
 
 <p align="center">
   <img src="frontend/assets/logo2.png" width="200" />
@@ -14,7 +14,7 @@
 
 ---
 
-## 프로젝트 소개
+## 📚프로젝트 소개
 
 iPlanner는 학습자 맞춤형 계획 수립과 실시간 학습 관리를 지원하는 AI 기반 학습 플래너 애플리케이션입니다.
 
