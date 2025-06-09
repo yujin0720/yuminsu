@@ -21,7 +21,7 @@ Flutter로 구현된 클라이언트 앱으로, 사용자 인터페이스를 통
   ㄴ `mypage.dart`: 마이페이지 - 사용자 프로필, 주간 공부 시간, 실제 공부 시간 확인  
   ㄴ `edit_profile_page.dart`: 사용자 이름, 이메일, 연락처 수정 및 비밀번호 변경 화면  
   ㄴ `password_check_page.dart`: 개인 정보 접근 전 비밀번호 재확인 페이지  
-  ㄴ `studyplan.dart`: 시험 정보와 공부 자료 입력 → AI가 계획 자동 생성  
+  ㄴ `studyplan.dart`: 시험 날짜와 학습 자료를 설정하면 AI가 계획 자동 생성  
   ㄴ `submain.dart`: 주간 학습 계획 화면 (요일별 체크박스 및 계획 수정 UI)  
   ㄴ `study_result.dart`: 학습 완료 체크 화면 - 주차별 항목 체크 UI 제공  
   ㄴ `timer.dart`: 공부 시간 측정용 타이머 UI 화면  
