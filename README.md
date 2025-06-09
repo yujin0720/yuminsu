@@ -14,7 +14,7 @@ Flutter로 구현된 클라이언트 앱으로, 사용자 인터페이스를 통
 - `assets/`: 이미지, 아이콘, 폰트 등 앱에서 사용하는 정적 리소스 저장
 - `ios/`: iOS 빌드를 위한 설정 파일 포함 (Info.plist 등)
 - `lib/`: 앱의 핵심 로직과 UI가 구현된 Dart 코드가 위치  
-  ㄴ `edit_profile_page.dart`: 사용자 이름, 이메일, 연락처 수정 및 비밀번호 변경 화면
+  ㄴ `edit_profile_page.dart`: 사용자 이름, 이메일, 연락처 수정 및 비밀번호 변경 화면 
   ㄴ `folder_home_page.dart`: 필기 노트 목록을 폴더 형태로 관리하는 홈 화면
   ㄴ `login_page.dart`: 로그인 화면 (ID, 비밀번호 입력 및 토큰 저장 처리 포함) 
   ㄴ `main.dart`: 앱 실행 진입점 및 라우팅 설정  
