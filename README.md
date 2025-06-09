@@ -1,11 +1,9 @@
 <p align="center">
-  <img src="frontend/assets/logo2.png" width="150" />
+  <img src="frontend/assets/logo2.png" width="200" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/yujin0720/yuminsu">
-    <img src="https://img.shields.io/github/stars/yujin0720/yuminsu?style=social" alt="GitHub stars"/>
-  </a>
+
   <img src="https://img.shields.io/github/license/yujin0720/yuminsu.svg" alt="License: MIT">
   <img src="https://img.shields.io/badge/Built%20with-Flutter-blue?logo=flutter" alt="Flutter">
   <img src="https://img.shields.io/badge/Backend-FastAPI-green?logo=fastapi" alt="FastAPI">
