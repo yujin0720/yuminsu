@@ -14,14 +14,14 @@ Flutter로 구현된 클라이언트 앱으로, 사용자 인터페이스를 통
 - `assets/`: 이미지, 아이콘, 폰트 등 앱에서 사용하는 정적 리소스 저장
 - `ios/`: iOS 빌드를 위한 설정 파일 포함 (Info.plist 등)
 - `lib/`: 앱의 핵심 로직과 UI가 구현된 Dart 코드가 위치  
-  ㄴ `edit_profile_page.dart`: 사용자 이름, 이메일, 연락처 수정 및 비밀번호 변경 화면 
-  ㄴ `folder_home_page.dart`: 필기 노트 목록을 폴더 형태로 관리하는 홈 화면
-  ㄴ `login_page.dart`: 로그인 화면 (ID, 비밀번호 입력 및 토큰 저장 처리 포함) 
+  ㄴ `edit_profile_page.dart`: 사용자 이름, 이메일, 연락처 수정 및 비밀번호 변경 화면  
+  ㄴ `folder_home_page.dart`: 필기 노트 목록을 폴더 형태로 관리하는 홈 화면  
+  ㄴ `login_page.dart`: 로그인 화면 (ID, 비밀번호 입력 및 토큰 저장 처리 포함)   
   ㄴ `main.dart`: 앱 실행 진입점 및 라우팅 설정  
-  ㄴ `mypage.dart`: 마이페이지 - 사용자 프로필, 주간 공부 시간, 실제 공부 시간 확인
-  ㄴ `note_list_page.dart`: 특정 폴더 내의 노트 리스트를 보여주는 화면
-  ㄴ `note_page.dart`: PDF 필기 기능 제공 - 하이라이트, 펜, 지우개, 썸네일 생성 등 포함
-  ㄴ `password_check_page.dart`: 개인 정보 접근 전 비밀번호 재확인 페이지
+  ㄴ `mypage.dart`: 마이페이지 - 사용자 프로필, 주간 공부 시간, 실제 공부 시간 확인  
+  ㄴ `note_list_page.dart`: 특정 폴더 내의 노트 리스트를 보여주는 화면  
+  ㄴ `note_page.dart`: PDF 필기 기능 제공 - 하이라이트, 펜, 지우개, 썸네일 생성 등 포함  
+  ㄴ `password_check_page.dart`: 개인 정보 접근 전 비밀번호 재확인 페이지  
   ㄴ `signup_page.dart`: 회원가입 화면 (생년월일, 전화번호, 비밀번호 등 입력)  
   ㄴ `splash_page.dart`: 앱 실행 시 첫 화면, 토큰 유무에 따라 자동 로그인 처리  
   ㄴ `study_result.dart`: 학습 완료 체크 화면 - 주차별 항목 체크 UI 제공  
