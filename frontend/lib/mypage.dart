@@ -57,11 +57,42 @@ class _MyPageState extends State<MyPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F8),
       appBar: AppBar(
-        title: const Text('마이 페이지', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
-      ),
+  title: const Text('마이 페이지', style: TextStyle(color: Colors.black)),
+  backgroundColor: Colors.white,
+  iconTheme: const IconThemeData(color: Colors.black),
+  elevation: 0,
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.logout),
+      onPressed: () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('로그아웃'),
+            content: const Text('로그아웃 하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('accessToken');
+          if (!mounted) return;
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        }
+      },
+    ),
+  ],
+),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -286,7 +317,7 @@ Widget _buildStudyTimeSection() {
       if (accessToken == null) return;
 
       final response = await http.get(
-        Uri.parse('http://192.168.35.189:8000/user/profile'),
+        Uri.parse('http://3.107.195.136:8000/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json; charset=UTF-8',
