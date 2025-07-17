@@ -1,1 +1,20 @@
+.env# Python
+__pycache__/
+*.pyc
+
+# VSCode 설정 파일 (원하면 제외)
+.vscode/
+
+# 환경 파일
 .env
+
+# Flutter (혹시 Flutter 관련도 gitignore 하려면)
+build/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+*.lock
+
+# macOS 쓰면 이것도
+.DS_Store
