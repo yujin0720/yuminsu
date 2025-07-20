@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.routing import APIRoute
 
+
 # 프로젝트 루트에서 필요한 라우터 모드로 갱신
 from routers import planner, row_plan, auth, user, subject, plan, handwriting, timer, pdf
 

@@ -4,15 +4,15 @@ import 'dart:convert';
 import 'note_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_selector/file_selector.dart';
-import 'dart:io';  // ✅ File 객체 사용 (모바일에서만 필요)
+import 'dart:io';  // File 객체 사용 (모바일에서만 필요)
 
 
 Map<int, List<Stroke>> pageStrokes = {};  // 썸네일 테스트용
-const String baseUrl = 'http://192.168.35.189:8000'; // 또는 실제 서버 주소
-
+const String baseUrl = 'http://3.107.195.136:8000'; // 또는 실제 서버 주소
+const cobaltBlue = Color(0xFF004377);
 
 //pdf 업로드 기능 때문에 모바일로만 실행 가능.
-/// ✅ 노트 모델 클래스
+/// 노트 모델 클래스
 class NoteItem {
   final int id;
   final String title;
@@ -25,7 +25,7 @@ class NoteItem {
   }
 }
 
-/// 📄 특정 폴더의 노트 리스트 및 생성 화면
+/// 특정 폴더의 노트 리스트 및 생성 화면
 class NoteListPage extends StatefulWidget {
   final int folderId;
   final String folderName;
@@ -43,6 +43,7 @@ class NoteListPage extends StatefulWidget {
 class _NoteListPageState extends State<NoteListPage> {
   List<NoteItem> notes = [];
   String _sortOption = '최신순';
+  
 
 
   @override
@@ -56,14 +57,14 @@ class _NoteListPageState extends State<NoteListPage> {
     return prefs.getString('accessToken');
   }
 
-  /// ✅ 노트 리스트 불러오기
+  /// 노트 리스트 불러오기
   Future<void> fetchNotes() async {
     final accessToken = await getAccessToken();
     if (accessToken == null) return;
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.35.189:8000/pdf/notes/${widget.folderId}'),
+        Uri.parse('http://3.107.195.136:8000/pdf/notes/${widget.folderId}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -77,16 +78,16 @@ class _NoteListPageState extends State<NoteListPage> {
           _sortNotes(); // 정렬 함수 호출 추가
         });
       } else {
-        debugPrint('❌ 노트 목록 불러오기 실패: ${response.body}');
+        debugPrint('노트 목록 불러오기 실패: ${response.body}');
         setState(() => notes = []);
       }
     } catch (e) {
-      debugPrint('❌ 예외 발생: $e');
+      debugPrint('예외 발생: $e');
       setState(() => notes = []);
     }
   }
 
-  /// ✅ 노트 생성 다이얼로그 및 API 호출
+  /// 노트 생성 다이얼로그 및 API 호출
   Future<void> createNote() async {
     final controller = TextEditingController();
 
@@ -119,7 +120,7 @@ class _NoteListPageState extends State<NoteListPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.35.189:8000/pdf/notes'),
+        Uri.parse('http://3.107.195.136:8000/pdf/notes'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -130,11 +131,11 @@ class _NoteListPageState extends State<NoteListPage> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         await fetchNotes();
       } else {
-        debugPrint('❌ 노트 생성 실패: ${response.body}');
+        debugPrint('노트 생성 실패: ${response.body}');
         _showErrorDialog('노트 생성 실패', response.body);
       }
     } catch (e) {
-      debugPrint('❌ 예외 발생: $e');
+      debugPrint('예외 발생: $e');
       _showErrorDialog('예외 발생', e.toString());
     }
   }
@@ -158,39 +159,35 @@ class _NoteListPageState extends State<NoteListPage> {
 
   Drawer _buildDrawer() {
     return Drawer(
-      backgroundColor: const Color(0xFFFBFCF7),
+      backgroundColor: const Color(0xFFF5F5F5),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const DrawerHeader(
             child: Text(
               '메뉴',
-              style: TextStyle(fontSize: 20, color: Color(0xFF004377)),
+              style: TextStyle(fontSize: 20, color: cobaltBlue),
             ),
-          ),
-          ExpansionTile(
-            title: const Text(
-              'PDF',
-              style: TextStyle(color: Color(0xFF004377)),
-            ),
-            children: const [
-              ListTile(title: Text('- A과목')),
-              ListTile(title: Text('- B과목')),
-              ListTile(title: Text('- PDF')),
-            ],
           ),
           ListTile(
-            title: const Text(
-              'AI 학습플래너',
-              style: TextStyle(color: Color(0xFF004377)),
-            ),
+            title: const Text('PDF', style: TextStyle(color: cobaltBlue)),
+            onTap: () => Navigator.pushNamed(context, '/folder'),
+          ),
+          ListTile(
+            title: const Text('홈', style: TextStyle(color: cobaltBlue)),
             onTap: () => Navigator.pushNamed(context, '/home'),
           ),
-          const ListTile(
-            title: Text('스터디 타이머', style: TextStyle(color: Color(0xFF004377))),
+          ListTile(
+            title: const Text('AI 학습플래너', style: TextStyle(color: cobaltBlue)),
+            onTap: () => Navigator.pushNamed(context, '/submain'),
           ),
-          const ListTile(
-            title: Text('마이페이지', style: TextStyle(color: Color(0xFF004377))),
+          ListTile(
+            title: const Text('스터디 타이머', style: TextStyle(color:cobaltBlue)),
+            onTap: () => Navigator.pushNamed(context, '/timer'),
+          ),
+          ListTile(
+            title: const Text('마이페이지', style: TextStyle(color: cobaltBlue)),
+            onTap: () => Navigator.pushNamed(context, '/mypage'),
           ),
         ],
       ),
@@ -200,13 +197,19 @@ class _NoteListPageState extends State<NoteListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFCF7), 
+      backgroundColor: const Color(0xFFF5F5F5), 
       appBar: AppBar(
-        
-        title: Text('📁 ${widget.folderName}',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // 이전 페이지(FolderHomePage)로 정상 복귀
+          },
+        ),
+              
+        title: Text('${widget.folderName}',
         style: const TextStyle(color: Colors.black87),
         ),
-        backgroundColor: const Color(0xFFFBFCF7),  // 배경 맞춤
+        backgroundColor: const Color(0xFFF5F5F5),  // 배경 맞춤
         elevation: 0,                              // 그림자 없애 부드럽게
         iconTheme: const IconThemeData(color: Colors.black87), // 햄버거/뒤로가기 등 아이콘도 맞춤
         actions: [
@@ -269,8 +272,8 @@ class _NoteListPageState extends State<NoteListPage> {
                     );
                   },
                   onDismissed: (direction) async {
-                    await deleteNote(note.id); // ✅ 네 함수 그대로 사용
-                    setState(() => notes.removeAt(index)); // ✅ 리스트에서 제거
+                    await deleteNote(note.id); 
+                    setState(() => notes.removeAt(index)); // 리스트에서 제거
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('${note.title} 삭제됨')),
                     );
@@ -315,6 +318,7 @@ class _NoteListPageState extends State<NoteListPage> {
             ),
           );
         },
+        backgroundColor: cobaltBlue, 
         child: const Icon(Icons.add),
       ),
     );
@@ -362,7 +366,7 @@ class _NoteListPageState extends State<NoteListPage> {
       final fileName = pickedFile.name;
 
       final accessToken = await getAccessToken();
-      final uri = Uri.parse('http://192.168.35.189:8000/pdf/upload');
+      final uri = Uri.parse('http://3.107.195.136:8000/pdf/upload');
 
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $accessToken'
@@ -385,7 +389,7 @@ class _NoteListPageState extends State<NoteListPage> {
           ),
         );
       } else {
-        debugPrint('❌ 업로드 실패: ${response.statusCode}');
+        debugPrint('업로드 실패: ${response.statusCode}');
       }
     }
   }
@@ -400,10 +404,10 @@ class _NoteListPageState extends State<NoteListPage> {
     );
 
     if (response.statusCode == 200) {
-      debugPrint("✅ 노트 삭제 성공");
+      debugPrint("노트 삭제 성공");
       // 삭제 후 노트 목록 다시 로드하거나 리스트에서 제거
     } else {
-      debugPrint("❌ 노트 삭제 실패: ${response.statusCode}");
+      debugPrint("노트 삭제 실패: ${response.statusCode}");
     }
   }
 
@@ -423,33 +427,6 @@ class _NoteListPageState extends State<NoteListPage> {
 
 
 
-
-
-  // /// 각 노트의 첫 번째 썸네일 URL 가져오기
-  // Future<String?> fetchFirstThumbnail(int pdfId) async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final accessToken = prefs.getString('accessToken');
-
-  //   if (accessToken == null) return null;
-
-  //   try {
-  //     final response = await http.get(
-  //       Uri.parse('http://192.168.35.189:8000/pdf/pages/$pdfId'),
-  //       headers: {
-  //         'Authorization': 'Bearer $accessToken',
-  //       },
-  //     );
-  //     if (response.statusCode == 200) {
-  //       final pages = jsonDecode(utf8.decode(response.bodyBytes));
-  //       if (pages.isNotEmpty && pages[0]['image_preview_url'] != null) {
-  //         return 'http://192.168.35.189:8000${pages[0]['image_preview_url']}';
-  //       }
-  //     }
-  //   } catch (e) {
-  //     debugPrint('❌ 썸네일 가져오기 실패: $e');
-  //   }
-  //   return null; // 실패 시 null 반환
-  // }
 
 
 
@@ -481,7 +458,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
     try {
       // 썸네일 먼저 시도
       final response = await http.get(
-        Uri.parse('http://192.168.35.189:8000/pdf/pages/${widget.note.id}'),
+        Uri.parse('http://3.107.195.136:8000/pdf/pages/${widget.note.id}'),
         headers: {
           'Authorization': 'Bearer $accessToken',
         },
@@ -494,7 +471,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
           final imageUrl = firstPage['image_preview_url'];
           setState(() {
             if (imageUrl != null) {
-              thumbnailUrl = 'http://192.168.35.189:8000$imageUrl';
+              thumbnailUrl = 'http://3.107.195.136:8000$imageUrl';
             } else {
               firstPageId = firstPage['page_id'];
             }
@@ -502,7 +479,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
         }
       }
     } catch (e) {
-      debugPrint('❌ 페이지 또는 썸네일 로드 실패: $e');
+      debugPrint('페이지 또는 썸네일 로드 실패: $e');
     }
   }
 
@@ -531,7 +508,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16), // 잊지 말고 넣기
+        borderRadius: BorderRadius.circular(16), 
         onTap: () {
           Navigator.push(
             context,
@@ -628,12 +605,12 @@ class _NoteItemCardState extends State<NoteItemCard> {
     final token = prefs.getString('accessToken');
 
     final response = await http.get(
-      Uri.parse('http://192.168.35.189:8000/pdf/folders'),
+      Uri.parse('http://3.107.195.136:8000/pdf/folders'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {
-      debugPrint("❌ 폴더 목록 불러오기 실패");
+      debugPrint("폴더 목록 불러오기 실패");
       return;
     }
 
@@ -657,7 +634,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
                     await _moveNoteToFolder(noteId, folder['folder_id']);
                     Navigator.of(context).pop();
 
-                    // ✅ 콜백 실행 (노트 리스트에서 즉시 제거)
+                    // 콜백 실행 (노트 리스트에서 즉시 제거)
                     if (widget.onNoteMoved != null) {
                       widget.onNoteMoved!();
                     }
@@ -680,7 +657,7 @@ class _NoteItemCardState extends State<NoteItemCard> {
     final token = prefs.getString('accessToken');
 
     final response = await http.patch(
-      Uri.parse('http://192.168.35.189:8000/pdf/notes/$noteId'),
+      Uri.parse('http://3.107.195.136:8000/pdf/notes/$noteId'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -689,9 +666,9 @@ class _NoteItemCardState extends State<NoteItemCard> {
     );
 
     if (response.statusCode == 200) {
-      debugPrint("✅ 노트 이동 성공");
+      debugPrint("노트 이동 성공");
     } else {
-      debugPrint("❌ 노트 이동 실패: ${response.statusCode}");
+      debugPrint("노트 이동 실패: ${response.statusCode}");
     }
   }
 

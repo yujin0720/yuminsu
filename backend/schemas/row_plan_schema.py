@@ -15,8 +15,7 @@ class RowPlanCreate(BaseModel):
     type: str
     repetition: int
     ranking: int
-
-
+    plan_time: int
     class Config:
         from_attributes = True  # ✅ v2 표준
 
@@ -30,6 +29,7 @@ class RowPlanOut(BaseModel):
     row_plan_name: str
     type: str
     repetition: int
+    plan_time: int
     class Config:
         from_attributes = True  # ✅ v2 표준
 

@@ -61,7 +61,7 @@ def save_row_plans_to_db(user_data: dict):
     db = pymysql.connect(
         host='localhost',
         user='root',
-        password='ssdbwlsdl12!',
+        password='1204',
         database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
@@ -92,7 +92,7 @@ def generate_and_save_plans(user_id: int, subject_id: int):
     db = pymysql.connect(
         host='localhost',
         user='root',
-        password='ssdbwlsdl12!',
+        password='1204',
         database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
@@ -116,7 +116,8 @@ def generate_and_save_plans(user_id: int, subject_id: int):
                         "subject_id": subject_id,
                         "plan_name": f"{plan['row_plan_name']} - {r}회차 {t}",
                         "complete": False,
-                        "plan_time": 60,  # 기본 학습 시간
+                        "plan_time": plan.get("plan_time", 60),
+ # 기본 학습 시간
                         "plan_date": None  # 날짜 배정 전
                     })
 
@@ -139,6 +140,7 @@ def generate_and_save_plans(user_id: int, subject_id: int):
 
     except Exception as e:
         print("❌ 계획 생성 또는 저장 오류:", e)
+        print(traceback.format_exc())
     finally:
         db.close()
 
@@ -147,7 +149,7 @@ def create_plan_list_for_response(user_id: int, subject_id: int):
     db = pymysql.connect(
         host='localhost',
         user='root',
-        password='ssdbwlsdl12!',
+        password='1204',
         database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor

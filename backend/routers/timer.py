@@ -7,41 +7,51 @@ from pydantic import BaseModel
 from datetime import date, timedelta
 from utils.auth import get_current_user
 from typing import Dict
+from schemas.timer import TimerCreate
 
 router = APIRouter()
 
-# ✅ 타이머 저장용 스키마
-class TimerCreate(BaseModel):
-    study_date: date
-    total_minutes: int
+# # 타이머 저장용 스키마
+# class TimerCreate(BaseModel):
+#     study_date: date
+#     total_minutes: int
 
-# ✅ 공부 시간 저장 (추가 또는 갱신)
+
+# 누적이 아닌 여러 세션 생성
 @router.post("/")
-def add_or_update_timer(
+def add_timer_session(
     data: TimerCreate,
     db: Session = Depends(get_db),
     current_user: user_model.User = Depends(get_current_user)
 ):
-    timer = db.query(Timer).filter(
-        Timer.user_id == current_user.user_id,
-        Timer.study_date == data.study_date
-    ).first()
+    from datetime import timedelta
 
-    if timer:
-        timer.total_minutes = data.total_minutes
+    print("수신된 타이머 데이터:", data.dict())
+
+    # 세션 길이 계산: start~end 차이 or fallback to total_minutes
+    if data.start_time and data.end_time:
+        session_duration = int((data.end_time - data.start_time).total_seconds() / 60)
     else:
-        timer = Timer(
-            user_id=current_user.user_id,
-            study_date=data.study_date,
-            total_minutes=data.total_minutes
-        )
-        db.add(timer)
+        session_duration = data.total_minutes
 
+    # 새로운 Timer row 생성
+    timer = Timer(
+        user_id=current_user.user_id,
+        study_date=data.study_date,
+        total_minutes=session_duration,
+        start_time=data.start_time,
+        end_time=data.end_time
+    )
+    db.add(timer)
     db.commit()
-    return {"message": "Timer recorded", "minutes": timer.total_minutes}
 
-# ✅ 특정 날짜 공부 시간 조회
-@router.get("/timer/{study_date}")
+    return {"message": "세션 저장 완료", "session_minutes": session_duration}
+
+
+# 특정 날짜 공부 시간 조회
+from schemas.timer import TimerRead 
+
+@router.get("/timer/{study_date}", response_model=TimerRead)
 def get_timer(
     study_date: date,
     db: Session = Depends(get_db),
@@ -53,22 +63,25 @@ def get_timer(
     ).first()
     if not timer:
         raise HTTPException(status_code=404, detail="No timer found")
-    return {"total_minutes": timer.total_minutes}
+    return timer  # SQLAlchemy 객체 그대로 반환 (TimerRead + orm_mode가 처리)
 
-# ✅ 오늘 공부 시간 조회
+
+# 오늘 공부 시간 조회
 @router.get("/today")
 def get_today_time(
     current_user: user_model.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     today = date.today()
-    timer = db.query(Timer).filter(
+    timers = db.query(Timer).filter(
         Timer.user_id == current_user.user_id,
         Timer.study_date == today
-    ).first()
-    return {"today_minutes": timer.total_minutes if timer else 0}
+    ).all()
+    total_minutes = sum(t.total_minutes for t in timers)
+    return {"today_minutes": total_minutes}
 
-# ✅ 주간 전체 합계 조회
+
+# 주간 전체 합계 조회
 @router.get("/weekly")
 def get_weekly_total_time(
     current_user: user_model.User = Depends(get_current_user),
@@ -87,7 +100,7 @@ def get_weekly_total_time(
     weekly_minutes = sum(t.total_minutes for t in total)
     return {"weekly_minutes": weekly_minutes}
 
-# ✅ 주간 요일별 공부 시간 (주차 이동 지원)
+# 주간 요일별 공부 시간 (주차 이동 지원)
 @router.get("/weekly-by-day")
 def get_weekly_minutes_by_day(
     week_offset: int = 0,
@@ -110,3 +123,22 @@ def get_weekly_minutes_by_day(
         study_by_day[weekday_name] += entry.total_minutes
 
     return study_by_day
+
+
+# 해당 날짜의 모든 공부 세션 불러오기 
+
+from typing import List
+from schemas.timer import TimerRead
+
+@router.get("/sessions/{study_date}", response_model=List[TimerRead])
+def get_timer_sessions_by_date(
+    study_date: date,
+    db: Session = Depends(get_db),
+    current_user: user_model.User = Depends(get_current_user)
+):
+    sessions = db.query(Timer).filter(
+        Timer.user_id == current_user.user_id,
+        Timer.study_date == study_date
+    ).all()
+
+    return sessions

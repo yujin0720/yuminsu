@@ -55,7 +55,7 @@ class _NotePageState extends State<NotePage> {
   Offset? _scaleDragStart;
 
   bool _isScaling = false; // 현재 드래그가 핸들 기반인지 여부
-  int? _activeHandleIndex; // ✅ 핸들 꼭짓점 인덱스: 0~3
+  int? _activeHandleIndex; // 핸들 꼭짓점 인덱스: 0~3
 
   bool _showPenOptions = false;
   String _selectedPenType = 'pen'; // 예: pen, brush, highlighter
@@ -64,19 +64,15 @@ class _NotePageState extends State<NotePage> {
   double _toolbarHeight = 80.0;
 
   bool _isThumbnailVisible = true; // 상태 추가
-  // final String baseUrl = kIsWeb
-  //   ? 'http://192.168.35.189:8000'
-  //   : Platform.isAndroid
-  //       ? 'http://10.0.2.2:8000'
-  //       : 'http://localhost:8000';
+
   final String baseUrl = kIsWeb || Platform.isAndroid
-    ? 'http://192.168.35.189:8000'
-    : 'http://localhost:8000';
+    ? 'http://3.107.195.136:8000'
+    : 'http://3.107.195.136:8000';
 
   bool _isCapturing = false; // 중복 캡처 방지용
 
   List<TransformationController> _controllers = [];
-  bool _interactionEnabled = true; // 🟡 필드 선언 필요 (State 클래스에)
+  bool _interactionEnabled = true; // 필드 선언 필요 (State 클래스에)
 
   List<double> _minScales = [];
   List<Stroke> copiedStrokes = [];
@@ -88,10 +84,10 @@ class _NotePageState extends State<NotePage> {
 
     _fetchPages().then((_) {
       if (pages.isNotEmpty) {
-        // ✅ 페이지 수만큼 TransformationController 생성
+        // 페이지 수만큼 TransformationController 생성
         _controllers = List.generate(pages.length, (_) => TransformationController());
 
-        // ✅ 기존 단일 컨트롤러는 더 이상 사용하지 않으므로 제거
+        // 기존 단일 컨트롤러는 더 이상 사용하지 않으므로 제거
 
         _onPageChanged(0);
       }
@@ -151,12 +147,18 @@ class _NotePageState extends State<NotePage> {
         if (pages.isNotEmpty) {
           final pageId = pages[currentPageIndex]['page_id'];
           await _saveAnnotation(pageId);
-          debugPrint('✅ 페이지 나가기 전에 자동 저장됨');
+          debugPrint('페이지 나가기 전에 자동 저장됨');
         }
         return true;
       },
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context); // 현재 페이지 pop → 이전 NoteListPage로 돌아감
+            },
+          ),
           title: Text(
             widget.noteTitle,
             style: GoogleFonts.notoSansKr(fontSize: 20),
@@ -377,7 +379,7 @@ class _NotePageState extends State<NotePage> {
                                   },
                                   child: Builder(
                                     builder: (context) {
-                                      debugPrint('🧪 scale: min=${_minScales[index]}, max=4.0');
+                                      debugPrint('scale: min=${_minScales[index]}, max=4.0');
                                       return InteractiveViewer(
                                         key: _viewerKeys[index],
                                         transformationController: _controllers[index],
@@ -440,7 +442,7 @@ class _NotePageState extends State<NotePage> {
 
     if (currentMode == DrawMode.hand) return;
 
-    // ✅ 확대 핸들 감지
+    // 확대 핸들 감지
     if (currentMode == DrawMode.lasso && selectedIndexes.isNotEmpty) {
       final strokes = pageStrokes[pageId]!;
       final box = _computeBoundingBox(strokes, selectedIndexes);
@@ -478,11 +480,11 @@ class _NotePageState extends State<NotePage> {
 
     _isScaling = false;
 
-    // ✅ 라쏘 시작
+    // 라쏘 시작
     if (currentMode == DrawMode.lasso) {
       lassoPoints.clear();
       lassoPoints.add(local); // 화면 좌표 저장
-      debugPrint("📌 라쏘 시작 좌표: ${local.dx}, ${local.dy}");
+      debugPrint("라쏘 시작 좌표: ${local.dx}, ${local.dy}");
       setState(() {});
       return;
     }
@@ -494,10 +496,10 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // ✏️ 필기 시작
+    // 필기 시작
     final paint = _createPaint();
     final newStroke = Stroke(points: [adjusted], paint: paint, penType: _selectedPenType);
-    debugPrint("📌 Stroke 좌표: ${adjusted.dx}, ${adjusted.dy}");
+    debugPrint("Stroke 좌표: ${adjusted.dx}, ${adjusted.dy}");
 
     pageStrokes[pageId] ??= [];
     pageStrokes[pageId]!.add(newStroke);
@@ -513,7 +515,7 @@ class _NotePageState extends State<NotePage> {
 
     if (currentMode == DrawMode.hand) return;
 
-    // 🧽 지우개
+    // 지우개
     if (currentMode == DrawMode.eraser) {
       final strokes = pageStrokes[pageId]!;
       strokes.removeWhere((stroke) =>
@@ -522,7 +524,7 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // ✅ 라쏘 그리기
+    // 라쏘 그리기
     if (currentMode == DrawMode.lasso) {
       if (selectedIndexes.isNotEmpty) {
         _moveSelection(details.delta); // 화면 기준 이동
@@ -533,7 +535,7 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // 🔧 핸들 드래그로 스케일
+    // 핸들 드래그로 스케일
     if (currentMode == DrawMode.transform && selectedIndexes.isNotEmpty) {
       if (_isScaling && _scaleDragStart != null) {
         final scenePrev = _controllers[currentPageIndex].toScene(details.localPosition);
@@ -564,7 +566,7 @@ class _NotePageState extends State<NotePage> {
       return;
     }
 
-    // ✏️ 필기 중
+    // 필기 중
     final strokes = pageStrokes[pageId];
     if (strokes != null && strokes.isNotEmpty) {
       strokes.last.points.add(adjusted);
@@ -688,7 +690,7 @@ class _NotePageState extends State<NotePage> {
       )),
     );
 
-    // ✅ handle hitbox 크기만 큼 판정 (화면엔 작게 보여도)
+    // handle hitbox 크기만 큼 판정 (화면엔 작게 보여도)
     const handleHitBoxSize = 44.0;
     final handles = [
       selectionRect.topLeft,
@@ -773,34 +775,34 @@ class _NotePageState extends State<NotePage> {
     final strokes = pageStrokes[pageId]!;
     selectedIndexes.clear();
 
-    debugPrint("🔍 라쏘 선택 시작 - 라쏘 포인트 개수: ${lassoPoints.length}, 스토로크 수: ${strokes.length}");
+    debugPrint("라쏘 선택 시작 - 라쏘 포인트 개수: ${lassoPoints.length}, 스토로크 수: ${strokes.length}");
 
-    // ✅ 라쏘 좌표를 scene 기준으로 변환
+    // 라쏘 좌표를 scene 기준으로 변환
     final transformedLasso = lassoPoints.map((p) => _controllers[currentPageIndex].toScene(p)).toList();
 
     if (transformedLasso.length > 2 &&
         (transformedLasso.first - transformedLasso.last).distance > 1.0) {
       transformedLasso.add(transformedLasso.first);
-      debugPrint("🔁 라쏘 경로 자동 닫힘: 시작점 추가됨");
+      debugPrint("라쏘 경로 자동 닫힘: 시작점 추가됨");
     }
 
     for (int i = 0; i < strokes.length; i++) {
       final stroke = strokes[i];
 
-      // ✅ 1. 점 중 하나라도 라쏘 내부에 포함되면 선택
+      // 1. 점 중 하나라도 라쏘 내부에 포함되면 선택
       bool pointInside = stroke.points.any((point) => _pointInPolygon(point, transformedLasso));
 
-      // ✅ 2. 중심점이 라쏘 경계 근처에만 있어도 선택되도록 보완
+      // 2. 중심점이 라쏘 경계 근처에만 있어도 선택되도록 보완
       final center = _computeCenter({i}, strokes);
       final nearLasso = transformedLasso.any((p) => (p - center).distance < 15); // ← 거리 임계값 (조절 가능)
 
       if (pointInside || nearLasso) {
-        debugPrint("✅ 선택됨: stroke $i");
+        debugPrint("선택됨: stroke $i");
         selectedIndexes.add(i);
       }
     }
 
-    debugPrint("🎯 최종 선택된 stroke index: $selectedIndexes");
+    debugPrint("최종 선택된 stroke index: $selectedIndexes");
 
     lassoPoints.clear();
     setState(() {});
@@ -820,7 +822,7 @@ class _NotePageState extends State<NotePage> {
     }
 
     if (!keepSelection) {
-      selectedIndexes.clear(); // 👉 기본적으로 해제, 원하면 유지
+      selectedIndexes.clear(); // 기본적으로 해제, 원하면 유지
     }
 
     setState(() {});
@@ -843,8 +845,8 @@ class _NotePageState extends State<NotePage> {
 
       case 'brush':
         paint
-          ..color = currentColor.withOpacity(0.85) // ✅ 이렇게 유지
-          ..strokeWidth = strokeWidth               // ✅ 저장된 굵기 그대로
+          ..color = currentColor.withOpacity(0.85) 
+          ..strokeWidth = strokeWidth               
           ..blendMode = BlendMode.srcOver
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
@@ -892,28 +894,28 @@ class _NotePageState extends State<NotePage> {
           final pageWidth = viewerSize.width;
           final pageHeight = pageWidth / aspectRatio;
 
-          // ✅ 실제 화면에 맞게 계산한 최소 배율 (초기 확대 비율)
+          // 실제 화면에 맞게 계산한 최소 배율 (초기 확대 비율)
           final initialScale = viewerSize.height / pageHeight;
           
-          final adjustedMinScale = initialScale * 0.95;  // ← 이 줄 추가!
+          final adjustedMinScale = initialScale * 0.95;  
           _minScales[index] = adjustedMinScale;
-          // // ✅ 최소 배율로 설정하여 축소 가능하도록
-          // _minScales[index] = initialScale;
+          
+         
 
           final dx = (viewerSize.width - pageWidth * initialScale) / 2;
           final dy = (viewerSize.height - pageHeight * initialScale) / 2;
-          debugPrint('🧮 initialScale 계산됨 → minScale으로 사용됨: \$initialScale');
+          debugPrint('initialScale 계산됨 → minScale으로 사용됨: \$initialScale');
 
-          debugPrint('📐 viewerSize: \${viewerSize.width} x \${viewerSize.height}');
-          debugPrint('📄 pageSize: \$pageWidth x \$pageHeight (aspectRatio: \$aspectRatio)');
-          debugPrint('🧮 initialScale: \$initialScale → minScale 설정 완료');
-          debugPrint('🎯 dx/dy: \$dx / \$dy');
+          debugPrint('viewerSize: \${viewerSize.width} x \${viewerSize.height}');
+          debugPrint('pageSize: \$pageWidth x \$pageHeight (aspectRatio: \$aspectRatio)');
+          debugPrint('initialScale: \$initialScale → minScale 설정 완료');
+          debugPrint('dx/dy: \$dx / \$dy');
 
           _controllers[index].value = Matrix4.identity()
             ..translate(dx, dy)
             ..scale(initialScale);
 
-          debugPrint('🧭 controller matrix: \${_controllers[index].value}');
+          debugPrint('controller matrix: \${_controllers[index].value}');
         }
       }
     });
@@ -939,13 +941,13 @@ class _NotePageState extends State<NotePage> {
       );
 
       if (response.statusCode == 201) {
-        // 🔄 전체 페이지 및 관련 리스트 초기화
+        // 전체 페이지 및 관련 리스트 초기화
         await _fetchPages();
 
-        // ✅ 새로 추가된 페이지 인덱스
+        // 새로 추가된 페이지 인덱스
         final newIndex = pages.length - 1;
 
-        // ✅ 페이지 데이터, 컨트롤러, 키 등이 전부 정상인지 확인
+        // 페이지 데이터, 컨트롤러, 키 등이 전부 정상인지 확인
         final isSafe = newIndex >= 0 &&
             newIndex < _controllers.length &&
             newIndex < _viewerKeys.length &&
@@ -953,15 +955,15 @@ class _NotePageState extends State<NotePage> {
             pageStrokes.containsKey(pages[newIndex]['page_id']);
 
         if (!isSafe) {
-          debugPrint("❌ _addPage → 데이터 누락 또는 인덱스 범위 초과: $newIndex");
+          debugPrint("_addPage → 데이터 누락 또는 인덱스 범위 초과: $newIndex");
           return;
         }
 
-        // ✅ 렌더링 후 안전하게 jumpToPage 및 상태 설정
+        // 렌더링 후 안전하게 jumpToPage 및 상태 설정
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _pageController.jumpToPage(newIndex);
 
-          // ⚠️ 너무 빠르면 context가 아직 null이므로 약간 지연
+          // 너무 빠르면 context가 아직 null이므로 약간 지연
           Future.delayed(const Duration(milliseconds: 120), () {
             setState(() {
               currentPageIndex = newIndex;
@@ -971,10 +973,10 @@ class _NotePageState extends State<NotePage> {
           });
         });
       } else {
-        debugPrint('❌ _addPage 실패: status ${response.statusCode}');
+        debugPrint('_addPage 실패: status ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ _addPage 예외 발생: $e');
+      debugPrint('_addPage 예외 발생: $e');
     }
   }
 
@@ -994,7 +996,7 @@ class _NotePageState extends State<NotePage> {
           page['aspect_ratio'] ??= 0.75;
         }
 
-        // ✅ 모든 구조 동기화 준비
+        // 모든 구조 동기화 준비
         final newControllers = List.generate(newPages.length, (_) => TransformationController());
         final newViewerKeys = List.generate(newPages.length, (_) => GlobalKey());
         final newRepaintKeys = List.generate(newPages.length, (_) => GlobalKey());
@@ -1005,7 +1007,7 @@ class _NotePageState extends State<NotePage> {
           newPageStrokes[pageId] = [];
         }
 
-        // ✅ 먼저 세팅 (strokes 구조가 존재해야 필기 데이터를 채울 수 있음)
+        // 먼저 세팅 (strokes 구조가 존재해야 필기 데이터를 채울 수 있음)
         setState(() {
           pages = newPages;
           _controllers = newControllers;
@@ -1015,13 +1017,13 @@ class _NotePageState extends State<NotePage> {
           pageStrokes = newPageStrokes;
         });
 
-        // ✅ 필기 데이터 로딩은 나중에 (setState 이후)
+        // 필기 데이터 로딩은 나중에 (setState 이후)
         await _loadAllAnnotations();
 
         setState(() {}); // 필기 반영 다시 트리거
       }
     } catch (e) {
-      debugPrint('❌ _fetchPages 오류: $e');
+      debugPrint('_fetchPages 오류: $e');
     }
   }
 
@@ -1033,11 +1035,11 @@ class _NotePageState extends State<NotePage> {
     final strokes = pageStrokes[pageId] ?? [];
     List<Map<String, dynamic>> lines = [];
 
-    // ✅ 현재 페이지 정보에서 aspect_ratio 사용
+    // 현재 페이지 정보에서 aspect_ratio 사용
     final page = pages.firstWhere((p) => p['page_id'] == pageId);
     final aspectRatio = page['aspect_ratio'] ?? 0.75; // 예: 4:3 → 0.75
 
-    // ✅ 좌표 정규화: width는 그대로, height만 비율 적용
+    // 좌표 정규화: width는 그대로, height만 비율 적용
     for (final stroke in strokes) {
       if (stroke.points.isNotEmpty) {
         lines.add({
@@ -1063,7 +1065,7 @@ class _NotePageState extends State<NotePage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken');
       if (token == null) {
-        debugPrint('❌ 토큰 없음: 삭제 요청 불가');
+        debugPrint('토큰 없음: 삭제 요청 불가');
         return;
       }
 
@@ -1083,7 +1085,7 @@ class _NotePageState extends State<NotePage> {
         body: jsonEncode(data),
       );
 
-      // ✅ 썸네일 캡처 및 업로드
+      // 썸네일 캡처 및 업로드
       if (_isCapturing) return;
       _isCapturing = true;
 
@@ -1092,17 +1094,17 @@ class _NotePageState extends State<NotePage> {
         if (imageBytes != null && imageBytes.isNotEmpty) {
           await uploadNoteThumbnail(imageBytes, pageId);
           //await _fetchPages(); // 최신 썸네일 반영
-          debugPrint('✅ 썸네일 업로드 완료');
+          debugPrint('썸네일 업로드 완료');
         } else {
-          debugPrint('⚠️ 썸네일 이미지 없음 → 업로드 생략');
+          debugPrint('썸네일 이미지 없음 → 업로드 생략');
         }
       } catch (e) {
-        debugPrint('❌ 썸네일 처리 중 오류: $e');
+        debugPrint('썸네일 처리 중 오류: $e');
       } finally {
         _isCapturing = false;
       }
     } catch (e) {
-      debugPrint('❌ _saveAnnotation 오류: $e');
+      debugPrint('_saveAnnotation 오류: $e');
       _isCapturing = false;
     }
   }
@@ -1110,7 +1112,7 @@ class _NotePageState extends State<NotePage> {
 
 
 
-  /// ✅ 필기 저장 debounce 함수 추가
+  /// 필기 저장 debounce 함수 추가
   Timer? _saveDebounce;
   void scheduleAnnotationSave(int pageId) {
     _saveDebounce?.cancel();
@@ -1184,7 +1186,7 @@ class _NotePageState extends State<NotePage> {
         setState(() {});
       }
     } catch (e) {
-      debugPrint('❌ _loadAnnotations 오류: $e');
+      debugPrint('_loadAnnotations 오류: $e');
     }
   }
 
@@ -1222,7 +1224,7 @@ class _NotePageState extends State<NotePage> {
 
       setState(() {});
     } catch (e) {
-      debugPrint('❌ _loadAllAnnotations 오류: $e');
+      debugPrint('_loadAllAnnotations 오류: $e');
     }
   }
 
@@ -1283,16 +1285,16 @@ class _NotePageState extends State<NotePage> {
 
   Future<Uint8List?> _captureThumbnailImage(int pageId) async {
     try {
-      // 1️⃣ 페이지 정보 불러오기
+      // 1️. 페이지 정보 불러오기
       final page = pages.firstWhere((p) => p['page_id'] == pageId);
       final pageNumber = page['page_number'];
       final aspectRatio = page['aspect_ratio'] ?? 0.75;  // 기본값 4:3
 
-      // 2️⃣ 렌더링 해상도 계산 (width 고정)
+      // 2️. 렌더링 해상도 계산 (width 고정)
       const double canvasWidth = 1080;
       final double canvasHeight = canvasWidth / aspectRatio;
 
-      // 3️⃣ PDF 렌더링 이미지 URL 생성
+      // 3️. PDF 렌더링 이미지 URL 생성
       final imageUrl = '$baseUrl/pdf/page-image/${widget.pdfId}/$pageNumber';
       final imageProvider = CachedNetworkImageProvider(imageUrl);
       final completer = Completer<ui.Image>();
@@ -1302,11 +1304,11 @@ class _NotePageState extends State<NotePage> {
       }));
       final pdfImage = await completer.future;
 
-      // 4️⃣ 합성 캔버스 생성
+      // 4️. 합성 캔버스 생성
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, canvasWidth, canvasHeight));
 
-      // 5️⃣ PDF 배경 이미지 비율 맞춰서 그림
+      // 5️. PDF 배경 이미지 비율 맞춰서 그림
       canvas.drawImageRect(
         pdfImage,
         Rect.fromLTWH(0, 0, pdfImage.width.toDouble(), pdfImage.height.toDouble()),
@@ -1314,7 +1316,7 @@ class _NotePageState extends State<NotePage> {
         Paint(),
       );
 
-      // 6️⃣ 필기 stroke 그리기
+      // 6️. 필기 stroke 그리기
       final strokes = pageStrokes[pageId] ?? [];
       for (final stroke in strokes) {
         if (stroke.points.length < 2) continue;
@@ -1331,13 +1333,13 @@ class _NotePageState extends State<NotePage> {
         canvas.drawPath(path, stroke.paint);
       }
 
-      // 7️⃣ 최종 이미지 생성
+      // 7️. 최종 이미지 생성
       final picture = recorder.endRecording();
       final ui.Image resultImage = await picture.toImage(canvasWidth.toInt(), canvasHeight.toInt());
       final byteData = await resultImage.toByteData(format: ui.ImageByteFormat.png);
       return byteData?.buffer.asUint8List();
     } catch (e) {
-      debugPrint('❌ 썸네일 합성 오류: $e');
+      debugPrint('썸네일 합성 오류: $e');
       return null;
     }
   }
@@ -1347,7 +1349,7 @@ class _NotePageState extends State<NotePage> {
 
   Future<void> uploadNoteThumbnail(Uint8List imageBytes, int pageId) async {
     try {
-      final url = Uri.parse('$baseUrl/pdf/thumbnails'); // 👉 baseUrl 활용
+      final url = Uri.parse('$baseUrl/pdf/thumbnails'); // baseUrl 활용
 
       final request = http.MultipartRequest('POST', url)
         ..fields['page_id'] = pageId.toString()
@@ -1363,13 +1365,13 @@ class _NotePageState extends State<NotePage> {
       final response = await request.send();
 
       if (response.statusCode == 200) {
-        debugPrint('✅ 썸네일 업로드 성공: page_id $pageId');
+        debugPrint('썸네일 업로드 성공: page_id $pageId');
       } else {
-        final body = await response.stream.bytesToString(); // 오류 디버깅에 도움
-        debugPrint('❌ 썸네일 업로드 실패: ${response.statusCode} - $body');
+        final body = await response.stream.bytesToString(); 
+        debugPrint('썸네일 업로드 실패: ${response.statusCode} - $body');
       }
     } catch (e) {
-      debugPrint('❌ 썸네일 업로드 중 예외: $e');
+      debugPrint('썸네일 업로드 중 예외: $e');
     }
   }
 
@@ -1464,7 +1466,7 @@ class _NotePageState extends State<NotePage> {
               );
             }).toList(),
 
-            // 🎨 사용자 정의 색상 선택용 팔레트 버튼
+            // 사용자 정의 색상 선택용 팔레트 버튼
             GestureDetector(
               onTap: _showColorPicker,
               child: Container(
@@ -1545,14 +1547,14 @@ class _NotePageState extends State<NotePage> {
       return const SizedBox.shrink(); // 빈노트용 처리
     }
 
-    return IgnorePointer( // ✅ PDF 이미지는 터치 이벤트 무시
+    return IgnorePointer( // PDF 이미지는 터치 이벤트 무시
       child: SizedBox(
         width: width,
         height: height,
         child: CachedNetworkImage(
           imageUrl: '$imageUrl?timestamp=${DateTime.now().millisecondsSinceEpoch}',
           cacheKey: imageUrl,
-          fit: BoxFit.contain, // ✅ 비율 유지하여 정확한 위치 정렬
+          fit: BoxFit.contain, // 비율 유지하여 정확한 위치 정렬
           placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
           errorWidget: (context, url, error) => const SizedBox.shrink(),
         ),
@@ -1566,7 +1568,7 @@ class _NotePageState extends State<NotePage> {
         width: width,
         height: height,
         child: GestureDetector(
-          behavior: HitTestBehavior.translucent, // ✅ 이 줄 추가
+          behavior: HitTestBehavior.translucent, 
           onTapDown: (details) {
             final local = details.localPosition;
             final scene = _controllers[currentPageIndex].toScene(local);
@@ -1605,7 +1607,7 @@ class _NotePageState extends State<NotePage> {
 
             if (selectionRect.inflate(20).contains(scene) || tappedHandle) return;
 
-            // 📌 약간 지연 후 선택 해제 (LongPress가 먼저 처리되게)
+            // 약간 지연 후 선택 해제 (LongPress가 먼저 처리되게)
             Future.delayed(const Duration(milliseconds: 150), () {
               if (!mounted) return;
               if (ModalRoute.of(context)?.isCurrent != true) return;
@@ -1654,7 +1656,7 @@ class _NotePageState extends State<NotePage> {
               Rect.fromCenter(center: handle, width: handleHitBoxSize, height: handleHitBoxSize).contains(scene)
             );
 
-            // 📌 바운딩 박스 내부나 핸들 안일 경우만 메뉴 표시
+            // 바운딩 박스 내부나 핸들 안일 경우만 메뉴 표시
             if (selectionRect.inflate(20).contains(scene) || tappedHandle) {
               _showSelectionMenu(details.globalPosition);
             } else if (copiedStrokes.isNotEmpty) {
@@ -1667,9 +1669,9 @@ class _NotePageState extends State<NotePage> {
               lassoPoints,
               selectedIndexes,
               _controllers[currentPageIndex].value.getMaxScaleOnAxis(),
-              _controllers[currentPageIndex], // ✅ 5번째 인자로 컨트롤러 객체 자체 추가
+              _controllers[currentPageIndex], 
             ),
-            size: Size(width, height), // 🎯 필기 영역도 동적 사이즈로
+            size: Size(width, height), 
           ),
         ),
       ),
@@ -1689,7 +1691,7 @@ class _NotePageState extends State<NotePage> {
       );
     }).toList();
 
-    debugPrint("✅ 복사 완료: ${copiedStrokes.length}개 stroke");
+    debugPrint("복사 완료: ${copiedStrokes.length}개 stroke");
   }
 
   void _pasteSelection() {
@@ -1698,7 +1700,7 @@ class _NotePageState extends State<NotePage> {
     final pageId = pages[currentPageIndex]['page_id'];
     final strokes = pageStrokes[pageId]!;
 
-    const Offset offset = Offset(50, 50); // 조금 오른쪽 아래로 붙여넣기
+    const Offset offset = Offset(50, 50); 
     final startIndex = strokes.length;
 
     for (final stroke in copiedStrokes) {
@@ -1718,23 +1720,6 @@ class _NotePageState extends State<NotePage> {
     });
   }
 
-  // void _showSelectionMenu(Offset globalPosition) {
-  //   showMenu(
-  //     context: context,
-  //     position: RelativeRect.fromLTRB(
-  //       globalPosition.dx, globalPosition.dy, globalPosition.dx, globalPosition.dy),
-  //     items: [
-  //       PopupMenuItem(
-  //         child: const Text('복사'),
-  //         onTap: _copySelection,
-  //       ),
-  //       PopupMenuItem(
-  //         child: const Text('삭제'),
-  //         onTap: () => _deleteSelection(),
-  //       ),
-  //     ],
-  //   );
-  // }
 
   void _showSelectionMenu(Offset globalPosition) {
     showMenu(
@@ -1874,8 +1859,8 @@ class _NotePageState extends State<NotePage> {
 
         canvas.drawPath(dashedRectPath, dashedPaint);
 
-        // 🔁 여기를 교체하세요:
-        final handleVisualSize = 12.0 / scale; // ✅ 시각용 크기
+       
+        final handleVisualSize = 12.0 / scale; 
         final handles = [
           box.topLeft,
           box.topRight,
@@ -1910,7 +1895,7 @@ class _NotePageState extends State<NotePage> {
               ? BlendMode.srcOver
               : stroke.paint.blendMode;
 
-        // 🌟 Glow 효과 (선택 시)
+        // Glow 효과 (선택 시)
         if (isSelected) {
           final glowPaint = Paint()
             ..color = const Color(0xFF90CAF9).withOpacity(0.6) // 연한 하늘색
@@ -1982,7 +1967,7 @@ class ThumbnailCanvas extends StatelessWidget {
     void paint(Canvas canvas, Size size) {
       if (strokes.isEmpty) return;
 
-      // ✅ 전체 stroke 좌표 범위를 구함
+      // 전체 stroke 좌표 범위를 구함
       double minX = double.infinity;
       double minY = double.infinity;
       double maxX = double.negativeInfinity;
@@ -2000,12 +1985,12 @@ class ThumbnailCanvas extends StatelessWidget {
       final contentWidth = maxX - minX;
       final contentHeight = maxY - minY;
 
-      // ✅ 캔버스 크기에 맞게 스케일 비율 계산
+      // 캔버스 크기에 맞게 스케일 비율 계산
       final scaleX = size.width / (contentWidth == 0 ? 1 : contentWidth);
       final scaleY = size.height / (contentHeight == 0 ? 1 : contentHeight);
       final scale = scaleX < scaleY ? scaleX : scaleY;
 
-      // ✅ 중앙 정렬을 위한 offset 계산
+      // 중앙 정렬을 위한 offset 계산
       final dx = (size.width - contentWidth * scale) / 2;
       final dy = (size.height - contentHeight * scale) / 2;
 

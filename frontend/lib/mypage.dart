@@ -23,7 +23,7 @@ class _MyPageState extends State<MyPage> {
   String password = '********';
 
   void refreshActualStudyTimeFromOutside() async {
-    print("✅ 마이페이지 새로고침 호출됨");
+    print("마이페이지 새로고침 호출됨");
     await fetchUserProfile();         // 서버에서 계획 시간 다시 불러오기
     setState(() {});                  // UI 다시 그림
   }
@@ -50,49 +50,29 @@ class _MyPageState extends State<MyPage> {
       await fetchUserProfile();      // 계획된 공부시간
       await Provider.of<TimerProvider>(context, listen: false).loadWeeklyStudyFromServer(); // 실제 공부시간
     });
-  } 
+  }
+
+
+  /// ✅ 로그아웃 함수
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('accessToken');
+
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4F8),
       appBar: AppBar(
-  title: const Text('마이 페이지', style: TextStyle(color: Colors.black)),
-  backgroundColor: Colors.white,
-  iconTheme: const IconThemeData(color: Colors.black),
-  elevation: 0,
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.logout),
-      onPressed: () async {
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('로그아웃'),
-            content: const Text('로그아웃 하시겠습니까?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('취소'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('확인'),
-              ),
-            ],
-          ),
-        );
-
-        if (confirmed == true) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('accessToken');
-          if (!mounted) return;
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-        }
-      },
-    ),
-  ],
-),
+        title: const Text('마이 페이지', style: TextStyle(color: Colors.black)),
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black),
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -142,6 +122,21 @@ class _MyPageState extends State<MyPage> {
           _buildInfoRow('비밀번호', password),
           _buildInfoRow('이메일', email),
           _buildInfoRow('연락처', phone),
+
+          const SizedBox(height: 20),
+Center(
+  child: ElevatedButton(
+    onPressed: _logout,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.redAccent,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    child: const Text('로그아웃'),
+  ),
+),
+
         ],
       ),
     );
@@ -218,7 +213,7 @@ Widget _buildStudyTimeSection() {
         const Text('이번주 공부시간', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 12),
 
-        // ✅ 목표 공부시간 테이블
+        // 목표 공부시간 테이블
         Table(
           border: TableBorder.symmetric(inside: BorderSide(color: Colors.grey.shade300)),
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -254,7 +249,7 @@ Widget _buildStudyTimeSection() {
         const Text('실제 공부시간', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 12),
 
-        // ✅ 실제 공부시간 테이블
+        // 실제 공부시간 테이블
         Consumer<TimerProvider>(
           builder: (context, timerProvider, child) {
             final studyMap = timerProvider.weeklyStudy;
@@ -301,7 +296,7 @@ Widget _buildStudyTimeSection() {
     final mins = minutes % 60;
     return '${hours}h ${mins}m';
   }
-  
+
   int _calculateWeekOffsetFromToday(DateTime selected) {
   final today = DateTime.now();
   final startOfTodayWeek = today.subtract(Duration(days: today.weekday - 1));
@@ -344,12 +339,11 @@ Widget _buildStudyTimeSection() {
           };
         });
       } else {
-        print('❌ 프로필 불러오기 실패: ${response.statusCode}, ${response.body}');
+        print('프로필 불러오기 실패: ${response.statusCode}, ${response.body}');
       }
     } catch (e) {
-      print('❗ 예외 발생: $e');
+      print('예외 발생: $e');
     }
   }
 }
 typedef MyPageState = _MyPageState;
-

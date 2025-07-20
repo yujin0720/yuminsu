@@ -16,7 +16,8 @@ class Subject(Base):
     start_date = Column(Date)
     end_date = Column(Date)
 
-    row_plan = relationship("RowPlan", back_populates="subject")
+    row_plans = relationship("RowPlan", back_populates="subject", cascade="all, delete-orphan")
+
     user = relationship("User", back_populates="subjects")
     plans = relationship("Plan", back_populates="subject")
 #민경언니 파일
