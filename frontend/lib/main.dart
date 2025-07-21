@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -278,8 +277,9 @@ class HomePageState extends State<HomePage> {
   Future<void> fetchWeeklyTodos() async {
     final headers = await _headers();
     final now = DateTime.now();
-    final start = now.subtract(Duration(days: now.weekday - 1));
-    final end = start.add(const Duration(days: 6));
+    // 수정된 코드 ↓ (오늘부터 7일 후까지)
+    final start = now;
+    final end = now.add(const Duration(days: 6));
     final res = await http.get(Uri.parse('$baseUrl/plan/weekly?start=${DateFormat('yyyy-MM-dd').format(start)}&end=${DateFormat('yyyy-MM-dd').format(end)}'), headers: headers);
     if (res.statusCode == 200) {
       final decoded = utf8.decode(res.bodyBytes); // UTF-8 명시적 디코딩
