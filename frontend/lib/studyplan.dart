@@ -94,11 +94,14 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
   });}
 }
 
-  Future<void> saveDataToDB() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken');
-    if (token == null) return;
+ Future<void> saveDataToDB() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('accessToken');
+  if (token == null) return;
 
+  int? subjectId;
+
+  if (isNewSubject) {
     final subjectResponse = await http.post(
       Uri.parse('http://3.107.195.136:8000/subject/'),
       headers: {
@@ -114,29 +117,66 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
       }),
     );
 
-    if (subjectResponse.statusCode != 200) return;
-
-    final subjectId = jsonDecode(subjectResponse.body)['subject_id'];
-
-    for (int i = 0; i < studyMaterials.length; i++) {
-      final material = studyMaterials[i];
-      await http.post(
-        Uri.parse('http://3.107.195.136:8000/row-plan/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'subject_id': subjectId,
-          'row_plan_name': material['row_plan_name'],
-          'type': material['type'],
-          'repetition': material['repetition'],
-          'ranking': i + 1,
-          'plan_time': material['plan_time'],
-        }),
-      );
+    if (subjectResponse.statusCode != 200) {
+      print('❌ subject 생성 실패: ${subjectResponse.body}');
+      return;
     }
+    subjectId = jsonDecode(subjectResponse.body)['subject_id'];
+    print('✅ 새 과목 등록 완료 → subject_id: $subjectId');
+  } else {
+    final existing = subjects.firstWhere(
+      (s) => s['test_name'] == testNameController.text,
+      orElse: () => {},
+    );
+
+    if (existing.isEmpty || existing['subject_id'] == null) {
+      print('❗ 기존 과목 정보 없음 → 삭제 생략');
+      return;
+    }
+
+    subjectId = existing['subject_id'];
+    print('🟡 기존 과목 ID: $subjectId');
+
+    // Plan 삭제
+    final planDeleteResponse = await http.delete(
+      Uri.parse('http://3.107.195.136:8000/plan/by-subject/$subjectId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    print('🧹 [DELETE] /plan/by-subject/$subjectId → ${planDeleteResponse.statusCode}');
+    print('➡️ response: ${planDeleteResponse.body}');
+
+    // RowPlan 삭제
+    final rowPlanDeleteResponse = await http.delete(
+      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    print('🧹 [DELETE] /row-plan/by-subject/$subjectId → ${rowPlanDeleteResponse.statusCode}');
+    print('➡️ response: ${rowPlanDeleteResponse.body}');
   }
+
+  // row_plan 등록
+  for (int i = 0; i < studyMaterials.length; i++) {
+    final material = studyMaterials[i];
+    final res = await http.post(
+      Uri.parse('http://3.107.195.136:8000/row-plan/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'subject_id': subjectId,
+        'row_plan_name': material['row_plan_name'],
+        'type': material['type'],
+        'repetition': material['repetition'],
+        'ranking': i + 1,
+        'plan_time': material['plan_time'],
+      }),
+    );
+
+    print('📦 [POST] row-plan: ${material['row_plan_name']} → status: ${res.statusCode}');
+  }
+}
+
 
   Future<void> saveAndRunAIAndMove() async {
     await saveDataToDB();
@@ -463,14 +503,145 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        ...studyMaterials.map((item) {
-                          return Card(
-                            child: ListTile(
-                              title: Text(item['row_plan_name'] ?? ''),
-                              subtitle: Text('유형: ${item['type']}, 반복: ${item['repetition']}회, 시간: ${item['plan_time']}분'),
-                            ),
+                        SizedBox(
+  height: 300, // 🔹 ListView 높이 고정 필요 (ReorderableListView 제약)
+  child: ReorderableListView(
+    buildDefaultDragHandles: true,
+    onReorder: (oldIndex, newIndex) {
+      setState(() {
+        if (newIndex > oldIndex) newIndex -= 1;
+        final item = studyMaterials.removeAt(oldIndex);
+        studyMaterials.insert(newIndex, item);
+      });
+    },
+    children: studyMaterials.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      return Card(
+        key: ValueKey('$index-${item['row_plan_name']}'),
+        child: ListTile(
+          title: Text('${index + 1}. ${item['row_plan_name']}'),
+          subtitle: Text('유형: ${item['type']}, 반복: ${item['repetition']}회, 시간: ${item['plan_time']}분'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+  icon: const Icon(Icons.edit),
+  onPressed: () {
+    final TextEditingController nameCtrl = TextEditingController(text: item['row_plan_name']);
+    final TextEditingController customTypeCtrl = TextEditingController(
+      text: (!['책', '인강'].contains(item['type'])) ? item['type'] : '',
+    );
+    String tempType = ['책', '인강'].contains(item['type']) ? item['type'] : '직접입력';
+    int tempRepeat = item['repetition'];
+    int tempTime = item['plan_time'];
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('자료 수정'),
+          content: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: '자료명'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      DropdownButton<String>(
+                        value: tempType,
+                        items: ['책', '인강', '직접입력']
+                            .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                            .toList(),
+                        onChanged: (val) {
+                          setModalState(() {
+                            tempType = val!;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      if (tempType == '직접입력')
+                        Expanded(
+                          child: TextField(
+                            controller: customTypeCtrl,
+                            decoration: const InputDecoration(labelText: '유형 입력'),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('반복:'),
+                      const SizedBox(width: 8),
+                      DropdownButton<int>(
+                        value: tempRepeat,
+                        items: List.generate(10, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}회'))),
+                        onChanged: (val) => setModalState(() => tempRepeat = val!),
+                      ),
+                      const SizedBox(width: 24),
+                      const Text('시간:'),
+                      const SizedBox(width: 8),
+                      DropdownButton<int>(
+                        value: tempTime,
+                        items: timeOptions.map((opt) {
+                          return DropdownMenuItem<int>(
+                            value: opt['value'] as int,
+                            child: Text(opt['label']),
                           );
                         }).toList(),
+                        onChanged: (val) => setModalState(() => tempTime = val!),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  studyMaterials[index] = {
+                    'row_plan_name': nameCtrl.text,
+                    'type': tempType == '직접입력' ? customTypeCtrl.text : tempType,
+                    'repetition': tempRepeat,
+                    'plan_time': tempTime,
+                  };
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('수정 완료'),
+            ),
+          ],
+        );
+      },
+    );
+  },
+),
+
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () {
+                  setState(() {
+                    studyMaterials.removeAt(index);
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }).toList(),
+  ),
+),
+
                       ],
 
                     ],

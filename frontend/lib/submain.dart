@@ -17,6 +17,25 @@ class SubMainPage extends StatefulWidget {
 class _SubMainPageState extends State<SubMainPage> {
   final Map<String, bool> isExpanded = {};
   bool isLoading = true;
+  String _extractPlanName(String text) {
+  // 예: "SADFGBNM - 1회차 S" → "1회차 S"
+  final parts = text.split('-');
+  if (parts.length >= 2) {
+    return parts.sublist(1).join('-').trim(); // '-'가 안쪽에 또 있어도 처리 가능
+  }
+  return text; // '-' 없으면 원본 반환
+}
+
+
+  String _extractSubjectName(String subject) {
+  // 예: "과목이름_3" → "과목이름"만 남기기
+  final parts = subject.split('_');
+  if (parts.length >= 2 && int.tryParse(parts.last) != null) {
+    return parts.sublist(0, parts.length - 1).join('_'); // '_'가 과목 이름에 들어갈 수도 있으므로
+  }
+  return subject; // 형식이 다르면 그대로 반환
+}
+
 
   @override
   void initState() {
@@ -60,10 +79,14 @@ class _SubMainPageState extends State<SubMainPage> {
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         elevation: 2,
                         child: ExpansionTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('$subject (${todos.length}개)', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    Text(
+      _extractSubjectName(subject),
+      style: const TextStyle(fontWeight: FontWeight.bold),
+    ),
+
                               IconButton(
                                 icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
                                 onPressed: () => _confirmDeleteSubject(subject),
@@ -79,7 +102,9 @@ class _SubMainPageState extends State<SubMainPage> {
                           children: todos.asMap().entries.map((entryItem) {
                             final i = entryItem.key;
                             final todoItem = entryItem.value;
-                            final String todoText = todoItem['text']?.toString() ?? '';
+                            final String todoTextRaw = todoItem['text']?.toString() ?? '';
+final String todoText = _extractPlanName(todoTextRaw);
+
                             final String planDate = todoItem['plan_date']?.toString() ?? '';
                             final planTimeRaw = todoItem['plan_time'];
                             final int? planTime = planTimeRaw is int ? planTimeRaw : int.tryParse(planTimeRaw?.toString() ?? '');
@@ -165,9 +190,10 @@ class _SubMainPageState extends State<SubMainPage> {
                                                 items: [
                                                   {'label': '5분', 'value': 5},
                                                   {'label': '10분', 'value': 10},
-                                                  {'label': '15분', 'value': 15},
+                                                  {'label': '20분', 'value': 20},
                                                   {'label': '30분', 'value': 30},
-                                                  {'label': '45분', 'value': 45},
+                                                  {'label': '40분', 'value': 40},
+                                                  {'label': '50분', 'value': 50},
                                                   {'label': '1시간', 'value': 60},
                                                   {'label': '1시간 10분', 'value': 70},
                                                   {'label': '1시간 20분', 'value': 80},
