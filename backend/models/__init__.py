@@ -11,4 +11,5 @@ from .pdf_notes import PdfNote
 from .pdf_pages import PdfPage
 from .pdf_annotations import PdfAnnotation
 from .handwriting import Handwriting
-from .user_profile import UserProfile  
+from .user_profile import UserProfile
+from .personal_schedule import PersonalSchedule 

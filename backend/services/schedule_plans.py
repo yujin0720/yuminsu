@@ -53,15 +53,15 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
         assigned = False
 
         for d in candidate_dates:
-            if used_time_by_date[d] + plan_time <= study_calendar[d]:
-                result.append({"plan_id": plan_id, "plan_date": d})
-                used_time_by_date[d] += plan_time
-                assigned = True
-                break
+            # ✅ 조건 제거: 공부 선호시간 초과하더라도 배정
+            result.append({"plan_id": plan_id, "plan_date": d})
+            used_time_by_date[d] += plan_time
+            assigned = True
+            break
 
         if not assigned:
-            print(f"⛔ 공부 시간이 부족하여 plan_id={plan_id} 를 배정할 수 없습니다.")
-            return [{"error": "공부 시간이 부족하여 모든 계획을 배정할 수 없습니다."}]
+            print(f"⛔ 계획 {plan_id} 을 어떤 날짜에도 배정할 수 없습니다.")
+            return [{"error": "모든 계획을 배정할 수 없습니다."}]
 
     return result
 
@@ -87,13 +87,12 @@ def fetch_user_data(db, user_id):
 
 # 지난 날짜 계획 초기화
 def reset_old_plan_dates(db, user_id):
-    today = date.today()
     db.query(Plan).filter(
         Plan.complete == False,
-        Plan.plan_date < today,
         Plan.user_id == user_id
     ).update({"plan_date": None})
     db.commit()
+
 
 # GPT 입력용 데이터 구성
 def build_prompt_data(user, subjects, plans):

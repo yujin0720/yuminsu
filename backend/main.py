@@ -6,6 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.routing import APIRoute
+from routers import personal_schedule  # 상단 import
+
 
 # 프로젝트 루트에서 필요한 라우터 모드로 갱신
 from routers import planner, row_plan, auth, user, subject, plan, handwriting, timer, pdf
@@ -13,6 +15,7 @@ from routers import planner, row_plan, auth, user, subject, plan, handwriting, t
 app = FastAPI()
 
 # CORS 설정 (개발 중엔 모든 출처 허용)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,6 +25,7 @@ app.add_middleware(
 )
 
 # 라우터 등록
+app.include_router(personal_schedule.router)  # 개인 일정 관리
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])         # 호신/인증 관리
 app.include_router(user.router, prefix="/user", tags=["User"])         # 유저 관리
 app.include_router(planner.router, prefix="/planner", tags=["Planner"]) # GPT 계획
