@@ -53,7 +53,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8004/subject/list'),
+      Uri.parse('http://3.107.195.136:8000/subject/list'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -75,7 +75,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8004/row-plan/by-subject/$subjectId'),
+      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -103,7 +103,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
   if (isNewSubject) {
     final subjectResponse = await http.post(
-      Uri.parse('http://3.107.195.136:8004/subject/'),
+      Uri.parse('http://3.107.195.136:8000/subject/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -139,7 +139,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     // Plan 삭제
     final planDeleteResponse = await http.delete(
-      Uri.parse('http://3.107.195.136:8004/plan/by-subject/$subjectId'),
+      Uri.parse('http://3.107.195.136:8000/plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
     print('🧹 [DELETE] /plan/by-subject/$subjectId → ${planDeleteResponse.statusCode}');
@@ -147,7 +147,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     // RowPlan 삭제
     final rowPlanDeleteResponse = await http.delete(
-      Uri.parse('http://3.107.195.136:8004/row-plan/by-subject/$subjectId'),
+      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
     print('🧹 [DELETE] /row-plan/by-subject/$subjectId → ${rowPlanDeleteResponse.statusCode}');
@@ -158,7 +158,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
   for (int i = 0; i < studyMaterials.length; i++) {
     final material = studyMaterials[i];
     final res = await http.post(
-      Uri.parse('http://3.107.195.136:8004/row-plan/'),
+      Uri.parse('http://3.107.195.136:8000/row-plan/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -203,7 +203,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.post(
-      Uri.parse('http://3.107.195.136:8004/plan/schedule'),
+      Uri.parse('http://3.107.195.136:8000/plan/schedule'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -234,7 +234,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.delete(
-      Uri.parse('http://3.107.195.136:8004/subject/delete-all'),
+      Uri.parse('http://3.107.195.136:8000/subject/delete-all'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

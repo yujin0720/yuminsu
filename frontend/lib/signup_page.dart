@@ -124,7 +124,7 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    final url = Uri.parse('http://3.107.195.136:8004/user/signup');
+    final url = Uri.parse('http://3.107.195.136:8000/user/signup');
     final Map<String, dynamic> signupData = {
       "login_id": _idController.text.trim(),
       "password": _pwController.text.trim(),
