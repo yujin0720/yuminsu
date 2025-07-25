@@ -357,3 +357,18 @@ def delete_plan(plan_id: int, request: Request, db: Session = Depends(get_db)):
     db.delete(plan)
     db.commit()
     return {"message": f"Plan {plan_id} deleted"}
+@router.delete("/by-subject/{subject_id}")  # ✅ prefix가 이미 '/plan'임
+def delete_plans_by_subject(
+    subject_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    token = request.headers.get("Authorization").split(" ")[1]
+    user_id = get_user_id_from_token(token)
+
+    deleted = db.query(Plan).filter(
+        Plan.subject_id == subject_id,
+        Plan.user_id == user_id
+    ).delete()
+    db.commit()
+    return {"message": f"{deleted}개의 plan이 삭제되었습니다."}

@@ -187,6 +187,8 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+Map<String, List<Map<String, dynamic>>> subjectGroups = {};
+
   List<Map<String, dynamic>> todayTodos = [];
   Map<String, List<Map<String, dynamic>>> weeklyTodos = {};
   Map<String, List<bool>> todoChecked = {};
@@ -200,6 +202,118 @@ class HomePageState extends State<HomePage> {
   Map<String, int> userStudyTime = {};
 
   final String baseUrl = 'http://3.107.195.136:8000';
+void _showAddPersonalScheduleDialog() {
+  final TextEditingController titleController = TextEditingController();
+  DateTime selectedDate = _focusedDay;
+  Color selectedColor = Colors.blue;
+  if (!mounted) return;  // ✅ 안전성 확보
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('개인 일정 추가'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: '일정 이름'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text('날짜:'),
+                const SizedBox(width: 10),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        selectedDate = picked;
+                      });
+                    }
+                  },
+                  child: Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
+                )
+              ],
+            ),
+            Row(
+              children: [
+                const Text('색상:'),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    // 나중에 색상 선택 팝업으로 확장 가능
+                    setState(() {
+                      selectedColor = Colors.purple; // 예시
+                    });
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: selectedColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _submitPersonalSchedule(
+                titleController.text,
+                selectedDate,
+                selectedColor,
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('추가'),
+          ),
+        ],
+      );
+    },
+  );
+}
+Future<void> _submitPersonalSchedule(String title, DateTime date, Color color) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('accessToken');
+  if (token == null) return;
+
+  final res = await http.post(
+    Uri.parse('$baseUrl/personal-schedule/'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: json.encode({
+      'title': title,
+      'date': DateFormat('yyyy-MM-dd').format(date),
+      'color': '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}',  // ARGB → RGB hex
+    }),
+  );
+
+  if (res.statusCode == 200 || res.statusCode == 201) {
+    await fetchCalendarEvents(); // 캘린더 갱신
+    await fetchTodayTodos();     // 오늘 할 일도 갱신
+    setState(() {});
+  } else {
+    //print("일정 저장 실패: ${res.statusCode}");
+  }
+}
 
    Future<void> refreshTodayStudyTime() async {
     final prefs = await SharedPreferences.getInstance();
@@ -240,7 +354,7 @@ class HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
     if (token == null || token.isEmpty) {
-      print('accessToken 없음!');
+      //print('accessToken 없음!');
       return {
         'Content-Type': 'application/json',
       };
@@ -260,19 +374,73 @@ class HomePageState extends State<HomePage> {
     await refreshTodayStudyTime();
   }
 
-  Future<void> fetchTodayTodos() async {
-    final headers = await _headers();
-    final res = await http.get(Uri.parse('$baseUrl/plan/today?date=${DateFormat('yyyy-MM-dd').format(DateTime.now())}'), headers: headers);
-    if (res.statusCode == 200) {
-      final decoded = utf8.decode(res.bodyBytes); // UTF-8 명시적 디코딩
-      final List data = json.decode(decoded);
-      setState(() {
-        todayTodos = data.map((e) => e as Map<String, dynamic>).toList();
-      });
-    } else {
-      print('fetchTodayTodos 실패: ${res.statusCode}');
-    }
+Future<void> fetchTodayTodos() async {
+  final headers = await _headers();
+  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  print('[TODAY] $today');
+
+  // 1. 학습 계획 불러오기
+  final planRes = await http.get(Uri.parse('$baseUrl/plan/today?date=$today'), headers: headers);
+  List<Map<String, dynamic>> plans = [];
+
+  print('[Plan StatusCode] ${planRes.statusCode}');
+  if (planRes.statusCode == 200) {
+    final decoded = utf8.decode(planRes.bodyBytes);
+    final List data = json.decode(decoded);
+    plans = data.map((e) => e as Map<String, dynamic>).toList();
+    print('[Plan Data] ${plans.length}건: $plans');
+  } else {
+    print('[Plan Error] ${planRes.body}');
   }
+
+  // 2. 개인 일정 불러오기
+  final personalRes = await http.get(Uri.parse('$baseUrl/personal-schedule/today'), headers: headers);
+  List<Map<String, dynamic>> personals = [];
+
+  print('[Personal StatusCode] ${personalRes.statusCode}');
+  if (personalRes.statusCode == 200) {
+    final decoded = utf8.decode(personalRes.bodyBytes);
+    final List data = json.decode(decoded);
+    print('[Raw Personal Data] $data');
+
+    personals = data.map((e) => {
+      'plan_name': e['title'],
+      'plan_id': null,
+      'complete': false,
+      'plan_time': 0,
+      'subject': '📌 개인 일정',
+    }).toList();
+
+    print('[Personal Todos] ${personals.length}건: $personals');
+  } else {
+    print('[Personal Error] ${personalRes.body}');
+  }
+
+  // 3. 병합 및 subject 확인
+
+// ✅ 병합된 all 리스트 기준으로 그룹핑
+// 1. 개인 일정은 리스트 형태로 보관
+final personalTodos = [...personals]; // subject: '📌 개인 일정'
+
+// 2. 플랜은 과목별 그룹핑
+final groupedPlans = <String, List<Map<String, dynamic>>>{};
+
+for (var plan in plans) {
+final subject = plan['subject'] ?? plan['subject_name'] ?? '기타';
+  groupedPlans.putIfAbsent(subject, () => []).add(plan);
+}
+
+// 3. 전체 todayTodos는 개인 + 플랜을 시간순으로 정렬하거나 단순 병합
+final all = [...personalTodos, ...plans]; // 필요 시 전체 순서도 관리 가능
+
+// ✅ 상태 반영
+setState(() {
+  todayTodos = all;                  // 도넛 계산용 (flat list)
+  subjectGroups = groupedPlans;     // UI 출력용 (과목별 그룹핑만)
+});
+
+}
+
 
   Future<void> fetchWeeklyTodos() async {
     final headers = await _headers();
@@ -297,7 +465,7 @@ class HomePageState extends State<HomePage> {
         };
       });
     } else {
-      print('fetchWeeklyTodos 실패: ${res.statusCode}');
+      //print('fetchWeeklyTodos 실패: ${res.statusCode}');
     }
   }
 
@@ -328,7 +496,7 @@ class HomePageState extends State<HomePage> {
       await fetchCalendarEvents();  // 캘린더 이벤트 반영
       setState(() {});              // 전체 UI 갱신
     } else {
-      print('complete 변경 실패: ${res.statusCode}');
+      //print('complete 변경 실패: ${res.statusCode}');
     }
   }
 
@@ -349,7 +517,7 @@ class HomePageState extends State<HomePage> {
         weeklyMinutes = weeklyDecoded['weekly_minutes'] ?? 0;
       });
     } else {
-      print('fetchTimers 실패: ${todayRes.statusCode}, ${weeklyRes.statusCode}');
+      //print('fetchTimers 실패: ${todayRes.statusCode}, ${weeklyRes.statusCode}');
     }
 }
 
@@ -363,7 +531,7 @@ class HomePageState extends State<HomePage> {
         userStudyTime = Map<String, int>.from(json.decode(decoded));
       });
     } else {
-      print('fetchUserStudyTime 실패: ${res.statusCode}');
+      //print('fetchUserStudyTime 실패: ${res.statusCode}');
     }
   }
 
@@ -409,7 +577,7 @@ class HomePageState extends State<HomePage> {
           eventDataMap[dateKey] = todos;
         }
       } else {
-        print(' [$formattedDate] 이벤트 조회 실패: ${res.statusCode}');
+        //print(' [$formattedDate] 이벤트 조회 실패: ${res.statusCode}');
       }
     }
 
@@ -433,9 +601,31 @@ class HomePageState extends State<HomePage> {
           children: [
             _buildTodoAndWeeklySection(),
             const SizedBox(height: 20),
-            _buildTodoCard(
-              title: "📅 캘린더",
-              child: _buildCalendar(),
+ // 캘린더 상단 제목 + 버튼
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+      "📅 캘린더",
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    ),
+    TextButton.icon(
+      onPressed: _showAddPersonalScheduleDialog,
+      icon: const Icon(Icons.add_circle_outline, size: 18),
+      label: const Text(
+        "개인일정 추가",
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+    ),
+  ],
+),
+    const SizedBox(height: 12),
+
+    // 캘린더 카드
+    _buildTodoCard(
+      title: ' ',
+      child: _buildCalendar(),
+
             ),
           ],
         ),
@@ -642,7 +832,6 @@ class HomePageState extends State<HomePage> {
   }
 
   
-
 Widget _buildTodoAndWeeklySection() {
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,34 +843,41 @@ Widget _buildTodoAndWeeklySection() {
           children: [
             _buildTodoCard(
               title: "오늘 할 일",
-              child: Consumer<TodoProvider>(
-                builder: (context, todoProvider, _) {
-                  final grouped = todoProvider.todayTodosGrouped;
-
-                  if (grouped.isEmpty) {
+              child: Builder(
+                builder: (context) {
+                  if (todayTodos.isEmpty && subjectGroups.isEmpty) {
                     return const SizedBox(
-                      height: 100, // 주간 카드와 동일한 높이로 맞춤
+                      height: 100,
                       child: Center(
-                        child: Text(
-                          "오늘은 계획된 Todo가 없습니다!",
-                          style: TextStyle(fontSize: 14),
-                        ),
+                        child: Text("오늘은 계획된 Todo가 없습니다!", style: TextStyle(fontSize: 14)),
                       ),
                     );
                   }
 
                   return Column(
-                    children: grouped.entries.map(
-                      (entry) => ExpansionTile(
-                        title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        children: entry.value.map((todo) => _buildStyledTodoTile(todo)).toList(),
-                      ),
-                    ).toList(),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ✅ 1. 개인 일정만 먼저 출력
+                      ...todayTodos
+                          .where((todo) => todo['subject'] == '📌 개인 일정')
+                          .map((todo) => _buildStyledTodoTile(todo)),
+
+                      const SizedBox(height: 12),
+
+                      // ✅ 2. 과목별 ExpansionTile 출력
+                      ...subjectGroups.entries.map((entry) {
+                        return ExpansionTile(
+                          title: Text(entry.key),
+                          children: entry.value
+                              .map((todo) => _buildStyledTodoTile(todo))
+                              .toList(),
+                        );
+                      }).toList(),
+                    ],
                   );
                 },
               ),
             ),
-
 
             const SizedBox(height: 20),
             _buildTodoCard(
@@ -763,8 +959,8 @@ Widget _buildTodoAndWeeklySection() {
 
 //현재는 계획당 시간 가중치를 두고 퍼센트 계산 중인데, 이게 별로이면, 나중에 수정 가능!
   double _calculateTodayPercent() {
-    print('todayTodos length: ${todayTodos.length}');
-    print('todayTodos: $todayTodos');
+    //print('todayTodos length: ${todayTodos.length}');
+    //print('todayTodos: $todayTodos');
 
     final totalPlannedTime = todayTodos
         .map((todo) => todo['plan_time'] ?? 0)
@@ -775,8 +971,8 @@ Widget _buildTodoAndWeeklySection() {
         .map((todo) => todo['plan_time'] ?? 0)
         .fold<int>(0, (a, b) => a + (b as num).toInt());
 
-    print('totalPlannedTime: $totalPlannedTime');
-    print('completedTime: $completedTime');
+    //print('totalPlannedTime: $totalPlannedTime');
+    //print('completedTime: $completedTime');
 
     if (totalPlannedTime == 0) return 0.0;
 
@@ -793,7 +989,7 @@ Widget _buildTodoAndWeeklySection() {
         v == true || v == 1 || v == '1' || v == 'true';
 
     for (var subject in weeklyTodos.entries) {
-      print('Subject: ${subject.key}, Todos: ${subject.value}');
+      //print('Subject: ${subject.key}, Todos: ${subject.value}');
 
       for (var todo in subject.value) {
         final rawTime = todo['plan_time'] ?? 0;
@@ -805,8 +1001,8 @@ Widget _buildTodoAndWeeklySection() {
       }
     }
 
-    print('Weekly totalPlannedTime: $totalPlannedTime');
-    print('Weekly completedTime: $completedTime');
+    //print('Weekly totalPlannedTime: $totalPlannedTime');
+    //print('Weekly completedTime: $completedTime');
 
     if (totalPlannedTime == 0) return 0.0;
 

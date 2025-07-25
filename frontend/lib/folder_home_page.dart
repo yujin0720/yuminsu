@@ -45,7 +45,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders'),
+        Uri.parse('http://3.107.195.136:8004/pdf/folders'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -80,7 +80,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders'),
+        Uri.parse('http://3.107.195.136:8004/pdf/folders'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -109,7 +109,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.patch(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders/$folderId'),
+        Uri.parse('http://3.107.195.136:8004/pdf/folders/$folderId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -133,7 +133,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders/$folderId'),
+        Uri.parse('http://3.107.195.136:8004/pdf/folders/$folderId'),
         headers: {'Authorization': 'Bearer $accessToken'},
       );
 

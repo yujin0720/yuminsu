@@ -9,7 +9,6 @@ from models.plan import Plan
 
 load_dotenv()
 
-
 # 날짜 → 요일 맵 생성
 def get_date_weekday_map(start_date: str, end_date: str) -> dict:
     date_map = {}
@@ -22,7 +21,6 @@ def get_date_weekday_map(start_date: str, end_date: str) -> dict:
         current += timedelta(days=1)
     return date_map
 
-
 # 순수 파이썬 기반 스케줄링 로직 (GPT 호출 없음)
 def get_plan_schedule_from_gpt(data: dict) -> list:
     user_info = data["users"][0]
@@ -31,7 +29,6 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
     study_calendar = data["study_calendar"]
     used_time_by_date = defaultdict(int)
 
-    # 과목별 가능한 날짜 리스트 만들기
     subject_date_ranges = defaultdict(list)
     for subj in data["subjects"]:
         sid = subj["subject_id"]
@@ -41,7 +38,6 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
             if start <= date_str <= end:
                 subject_date_ranges[sid].append(date_str)
 
-    # 정렬
     for sid in subject_date_ranges:
         subject_date_ranges[sid].sort()
 
@@ -57,18 +53,17 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
         assigned = False
 
         for d in candidate_dates:
-            if used_time_by_date[d] + plan_time <= study_calendar[d]:
-                result.append({"plan_id": plan_id, "plan_date": d})
-                used_time_by_date[d] += plan_time
-                assigned = True
-                break
+            # ✅ 조건 제거: 공부 선호시간 초과하더라도 배정
+            result.append({"plan_id": plan_id, "plan_date": d})
+            used_time_by_date[d] += plan_time
+            assigned = True
+            break
 
         if not assigned:
-            print(f"⛔ 공부 시간이 부족하여 plan_id={plan_id} 를 배정할 수 없습니다.")
-            return [{"error": "공부 시간이 부족하여 모든 계획을 배정할 수 없습니다."}]
+            print(f"⛔ 계획 {plan_id} 을 어떤 날짜에도 배정할 수 없습니다.")
+            return [{"error": "모든 계획을 배정할 수 없습니다."}]
 
     return result
-
 
 # 사용자, 과목, 계획 가져오기
 def fetch_user_data(db, user_id):
@@ -79,26 +74,21 @@ def fetch_user_data(db, user_id):
     subjects = db.query(Subject).filter(Subject.user_id == user_id).all()
 
     completed_names_query = db.query(Plan.plan_name).filter(
-        Plan.complete == True,
-        Plan.user_id == user_id
+        Plan.complete == True, Plan.user_id == user_id
     ).distinct()
     completed_names = {name for (name,) in completed_names_query}
 
     all_plans = db.query(Plan).filter(
-        Plan.complete == False,
-        Plan.user_id == user_id
+        Plan.complete == False, Plan.user_id == user_id
     ).all()
     filtered_plans = [p for p in all_plans if p.plan_name not in completed_names]
 
     return user, subjects, filtered_plans
 
-
 # 지난 날짜 계획 초기화
 def reset_old_plan_dates(db, user_id):
-    today = date.today()
     db.query(Plan).filter(
         Plan.complete == False,
-        Plan.plan_date < today,
         Plan.user_id == user_id
     ).update({"plan_date": None})
     db.commit()
@@ -121,8 +111,7 @@ def build_prompt_data(user, subjects, plans):
             "subject_id": p.subject_id,
             "plan_time": p.plan_time,
             "plan_name": p.plan_name
-        }
-        for p in plans
+        } for p in plans
     ]
 
     all_dates = set()
@@ -150,7 +139,6 @@ def build_prompt_data(user, subjects, plans):
         "study_calendar": study_calendar
     }
 
-
 # GPT 결과 반영
 def apply_plan_dates(db, plan_dates):
     updated = 0
@@ -164,7 +152,6 @@ def apply_plan_dates(db, plan_dates):
                 updated += 1
     db.commit()
     return updated
-
 
 # FastAPI에서 호출할 수 있도록 하는 진입점 함수
 def run_schedule_for_user(user_id: int, db):
