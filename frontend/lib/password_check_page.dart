@@ -128,7 +128,6 @@ class _PasswordCheckPageState extends State<PasswordCheckPage> {
                   ),
                   child: const Text('확인', style: TextStyle(fontSize: 16)),
                 ),
-
               )
             ],
           ),

@@ -80,7 +80,7 @@ def create_subject(request: Request, subject: SubjectCreate, db: Session = Depen
         return {"subject_id": new_subject.subject_id}
 
     except Exception as e:
-        print("subject 저장 중 오류 발생:", e)
+        print("subject 저장 중 오류 발생:", e) 
         raise HTTPException(status_code=500, detail=f"Subject 저장 실패: {str(e)}")
 
 # 전체 학습 데이터 삭제

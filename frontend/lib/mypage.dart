@@ -347,4 +347,3 @@ Widget _buildStudyTimeSection() {
   }
 }
 typedef MyPageState = _MyPageState;
-

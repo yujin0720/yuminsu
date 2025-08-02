@@ -188,7 +188,7 @@ class TimerProvider extends ChangeNotifier {
 
       final timerProvider = Provider.of<TimerProvider>(context, listen: false);
       await timerProvider.loadWeeklyStudyFromServer();
-
+      
     }
 
     await fetchSessionsByDate(DateTime.now());
