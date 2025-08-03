@@ -286,6 +286,7 @@ def delete_annotations_by_page(
 
 
 # ✅ 14. pdf 업로드
+'''
 @router.post("/upload", response_model=PdfNoteOut)
 def upload_pdf_file(
     title: str = Form(...),
@@ -361,8 +362,112 @@ def upload_pdf_file(
         db.add(new_page)
 
     db.commit()
-    return new_note
+    return new_note'''
 
+@router.post("/upload", response_model=PdfNoteOut)
+def upload_pdf_file(
+    title: str = Form(...),
+    folder_id: int = Form(None),
+    file: UploadFile = File(...),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    user_id = get_current_user_id(request)
+
+    # 1️⃣ 파일 저장
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext != ".pdf":
+        raise HTTPException(status_code=400, detail="PDF 파일만 업로드할 수 있습니다.")
+
+    pdf_filename = f"pdf_{uuid4().hex[:8]}.pdf"
+    pdf_save_path = f"static/pdf/{pdf_filename}"
+    os.makedirs(os.path.dirname(pdf_save_path), exist_ok=True)
+    with open(pdf_save_path, "wb") as f_out:
+        f_out.write(file.file.read())
+
+    # 2️⃣ 페이지 수 확인 + 첫 페이지 비율 계산
+    doc = fitz.open(pdf_save_path)
+    total_pages = doc.page_count
+
+    aspect_ratio = None
+    if total_pages > 0:
+        first_page = doc[0]
+        width = first_page.rect.width
+        height = first_page.rect.height
+        if height != 0:
+            aspect_ratio = round(width / height, 5)
+
+    # 3️⃣ PdfNote DB 등록
+    new_note = PdfNote(
+        title=title,
+        file_path=pdf_save_path,
+        total_pages=total_pages,
+        user_id=user_id,
+        folder_id=folder_id,
+        aspect_ratio=aspect_ratio
+    )
+    db.add(new_note)
+    db.commit()
+    db.refresh(new_note)
+
+    # 4️⃣ 각 페이지 PdfPage + 썸네일 저장
+    for i in range(total_pages):
+        image_filename = f"thumb_{new_note.pdf_id}_{i + 1}.png"
+        image_path = f"static/thumbnails/{image_filename}"
+        image_url = f"/static/thumbnails/{image_filename}"
+
+        try:
+            page_obj = doc[i]
+            width = page_obj.rect.width
+            height = page_obj.rect.height
+            page_aspect_ratio = round(width / height, 5) if height != 0 else None
+            generate_thumbnail(pdf_save_path, i + 1, image_path)
+        except Exception as e:
+            print(f"⚠️ 페이지 {i+1} 썸네일 생성 실패: {e}")
+            image_url = None
+            page_aspect_ratio = None
+
+        new_page = PdfPage(
+            pdf_id=new_note.pdf_id,
+            page_number=i + 1,
+            page_order=i + 1,
+            image_preview_url=image_url,
+            aspect_ratio=page_aspect_ratio,
+        )
+        db.add(new_page)
+
+    db.commit()
+
+    # ✅ 5️⃣ RAG: 텍스트 추출 → 쪼개기 → 임베딩 → 벡터 DB 저장
+    # ✅ 5️⃣ RAG: 텍스트 추출 → 쪼개기 → 임베딩 → 벡터 DB 저장 (디버깅 로그 포함)
+    try:
+        print("📌 RAG 시작: import 시도 중...")
+        from services.pdf_utils import extract_text_from_pdf
+        from services.embedding_service import embed_chunks
+        from services.text_splitter import split_text_into_chunks
+        from utils.vector_db_utils import save_vector_db
+        print("✅ RAG import 성공")
+
+        print("📌 PDF 텍스트 추출 중...")
+        text = extract_text_from_pdf(pdf_save_path)
+        print(f"🔍 추출된 텍스트 길이: {len(text)}")
+
+        print("📌 텍스트 쪼개는 중...")
+        chunks = split_text_into_chunks(text)
+        print(f"🔍 쪼갠 청크 수: {len(chunks)}")
+
+        print("📌 임베딩 처리 중...")
+        embeddings = embed_chunks(chunks)
+        print(f"🔍 임베딩 완료: {len(embeddings)}개")
+
+        print("📌 벡터 DB 저장 중...")
+        save_vector_db(embeddings, chunks)
+        print("✅ RAG 벡터 저장 완료")
+
+    except Exception as e:
+        print(f"❌ RAG 처리 실패: {e}")
+
+    return new_note
 
 
 # ✅ 15. pdf 페이지 이미지 렌더링 (비율 포함)
