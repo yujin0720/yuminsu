@@ -18,3 +18,4 @@ def ask_gpt(prompt: str) -> str:
         max_tokens=800
     )
     return response.choices[0].message.content.strip()
+

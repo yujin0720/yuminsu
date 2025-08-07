@@ -1,5 +1,5 @@
 
-# 라우터 등록  pdf, static 추가함
+#ㄴ비
 
 
 from fastapi import FastAPI

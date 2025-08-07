@@ -15,7 +15,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 db = pymysql.connect(
     host='localhost',
     user='root',
-    password='ssdbwlsdl12!',
+    password='1204',
     database='yuminsu',
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor
@@ -48,7 +48,7 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
         return []
 
 # 재생성할 유저 ID (임시 고정)
-TARGET_USER_ID = 3
+TARGET_USER_ID = 13
 
 def fetch_user_data(cursor, user_id):
     cursor.execute("SELECT * FROM user WHERE user_id = %s", (user_id,))

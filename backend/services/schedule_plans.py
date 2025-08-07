@@ -50,20 +50,32 @@ def get_plan_schedule_from_gpt(data: dict) -> list:
         plan_time = plan["plan_time"]
 
         candidate_dates = subject_date_ranges.get(subject_id, [])
-        assigned = False
 
+        # ✅ 공부량이 적은 날짜부터 정렬
+        candidate_dates.sort(key=lambda d: used_time_by_date[d])
+
+        assigned = False
         for d in candidate_dates:
-            # ✅ 조건 제거: 공부 선호시간 초과하더라도 배정
-            result.append({"plan_id": plan_id, "plan_date": d})
-            used_time_by_date[d] += plan_time
-            assigned = True
-            break
+            weekday = date_weekday_map[d]
+            max_time = study_time.get(weekday, 0)
+            if used_time_by_date[d] + plan_time <= max_time:
+                result.append({"plan_id": plan_id, "plan_date": d})
+                used_time_by_date[d] += plan_time
+                assigned = True
+                break
 
         if not assigned:
-            print(f"⛔ 계획 {plan_id} 을 어떤 날짜에도 배정할 수 없습니다.")
-            return [{"error": "모든 계획을 배정할 수 없습니다."}]
+            # ✅ 초과되더라도 가장 덜 사용된 날짜에 그냥 배정
+            fallback_date = min(candidate_dates, key=lambda d: used_time_by_date[d], default=None)
+            if fallback_date:
+                result.append({"plan_id": plan_id, "plan_date": fallback_date})
+                used_time_by_date[fallback_date] += plan_time
+            else:
+                print(f"⛔ 계획 {plan_id} 을 어떤 날짜에도 배정할 수 없습니다.")
+                return [{"error": "모든 계획을 배정할 수 없습니다."}]
 
     return result
+
 
 # 사용자, 과목, 계획 가져오기
 def fetch_user_data(db, user_id):

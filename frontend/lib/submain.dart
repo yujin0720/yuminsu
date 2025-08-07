@@ -227,7 +227,7 @@ final String todoText = _extractPlanName(todoTextRaw);
                         children: [
                           OutlinedButton.icon(
                             icon: const Icon(Icons.auto_awesome),
-                            label: const Text("AI 학습 계획 세우기!", style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: const Text("AI 학습 날짜 배분", style: TextStyle(fontWeight: FontWeight.bold)),
                             onPressed: _handleScheduleAI,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF004377),
@@ -301,7 +301,7 @@ final String todoText = _extractPlanName(todoTextRaw);
     }
   }
 
-  Future<void> _confirmDeletePlan(int planId) async {
+    Future<void> _confirmDeletePlan(int planId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -340,7 +340,8 @@ final String todoText = _extractPlanName(todoTextRaw);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로그인이 필요합니다.')));
       return;
     }
 
@@ -361,19 +362,25 @@ final String todoText = _extractPlanName(todoTextRaw);
     );
 
     try {
+      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
+      final firstSubjectKey = todoProvider.weeklyTodos.keys.first;
+      final subjectId = todoProvider.subjectIds[firstSubjectKey] ?? 0;
+
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/plan/schedule'),
+        Uri.parse('http://3.107.195.136:8000/plan/calendar'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
         },
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context); // 다이얼로그 닫기
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI 학습 계획이 성공적으로 저장되었습니다!')));
-        final provider = Provider.of<TodoProvider>(context, listen: false);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('AI 학습 계획이 성공적으로 저장되었습니다!')));
+        final provider =
+            Provider.of<TodoProvider>(context, listen: false);
         await provider.fetchTodosFromDB();
         provider.syncCheckedWithTodos();
         setState(() {
@@ -382,11 +389,13 @@ final String todoText = _extractPlanName(todoTextRaw);
           }
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류 발생: ${response.body}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('오류 발생: ${response.body}')));
       }
     } catch (e) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('네트워크 오류: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('네트워크 오류: $e')));
     }
   }
 
@@ -412,7 +421,8 @@ final String todoText = _extractPlanName(todoTextRaw);
               icon: const Icon(Icons.add),
               label: const Text('과목 추가하러 가기'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 backgroundColor: const Color(0xFF004377),
                 foregroundColor: Colors.white,
                 textStyle: const TextStyle(fontSize: 16),

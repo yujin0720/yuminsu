@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
         // ✅ accessToken 저장
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('accessToken', accessToken);
-        print('✅ 저장된 accessToken: $accessToken');
+       // print('✅ 저장된 accessToken: $accessToken');
 
         Navigator.pushReplacementNamed(context, '/home');
       } else {

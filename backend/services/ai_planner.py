@@ -4,12 +4,6 @@ import pymysql
 import traceback
 from config import ask_gpt
 from schemas.plan_schema import ToDoItem
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-
-env_path = Path(__file__).resolve().parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
 
 # GPT 응답을 안전하게 파싱
 def safe_parse_gpt_response(response: str) -> list:
@@ -66,14 +60,13 @@ def expand_row_plan_name(row_plan_name: str) -> list:
 # row_plan 테이블 저장
 def save_row_plans_to_db(user_data: dict):
     db = pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
+        host='3.107.195.136',
+        user='root',
+        password='1204',
+        database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
-
     try:
         with db.cursor() as cursor:
             for plan in user_data["row_plans"]:
@@ -100,10 +93,10 @@ def save_row_plans_to_db(user_data: dict):
 def generate_and_save_plans(user_id: int, subject_id: int):
     print(f"✅ AI 계획 생성 시작: user_id={user_id}, subject_id={subject_id}")
     db = pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
+        host='3.107.195.136',
+        user='root',
+        password='1204',
+        database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
@@ -172,14 +165,13 @@ def generate_and_save_plans(user_id: int, subject_id: int):
 # plan 테이블에서 ToDoItem 리스트 반환
 def create_plan_list_for_response(user_id: int, subject_id: int):
     db = pymysql.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
+        host='3.107.195.136',
+        user='root',
+        password='1204',
+        database='yuminsu',
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
-
     try:
         with db.cursor() as cursor:
             cursor.execute("""

@@ -94,10 +94,10 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
   });}
 }
 
- Future<void> saveDataToDB() async {
+Future<int?> saveDataToDB() async {
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  if (token == null) return;
+  if (token == null) return null;
 
   int? subjectId;
 
@@ -119,8 +119,9 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     if (subjectResponse.statusCode != 200) {
       print('❌ subject 생성 실패: ${subjectResponse.body}');
-      return;
+      return null;
     }
+
     subjectId = jsonDecode(subjectResponse.body)['subject_id'];
     print('✅ 새 과목 등록 완료 → subject_id: $subjectId');
   } else {
@@ -131,33 +132,29 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     if (existing.isEmpty || existing['subject_id'] == null) {
       print('❗ 기존 과목 정보 없음 → 삭제 생략');
-      return;
+      return null;
     }
 
     subjectId = existing['subject_id'];
     print('🟡 기존 과목 ID: $subjectId');
 
     // Plan 삭제
-    final planDeleteResponse = await http.delete(
+    await http.delete(
       Uri.parse('http://3.107.195.136:8000/plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    print('🧹 [DELETE] /plan/by-subject/$subjectId → ${planDeleteResponse.statusCode}');
-    print('➡️ response: ${planDeleteResponse.body}');
 
     // RowPlan 삭제
-    final rowPlanDeleteResponse = await http.delete(
+    await http.delete(
       Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    print('🧹 [DELETE] /row-plan/by-subject/$subjectId → ${rowPlanDeleteResponse.statusCode}');
-    print('➡️ response: ${rowPlanDeleteResponse.body}');
   }
 
   // row_plan 등록
   for (int i = 0; i < studyMaterials.length; i++) {
     final material = studyMaterials[i];
-    final res = await http.post(
+    await http.post(
       Uri.parse('http://3.107.195.136:8000/row-plan/'),
       headers: {
         'Content-Type': 'application/json',
@@ -172,61 +169,65 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
         'plan_time': material['plan_time'],
       }),
     );
-
-    print('📦 [POST] row-plan: ${material['row_plan_name']} → status: ${res.statusCode}');
   }
+
+  return subjectId;
 }
 
 
-  Future<void> saveAndRunAIAndMove() async {
-    await saveDataToDB();
-    if (!context.mounted) return;
 
+  Future<void> saveAndRunAIAndMove() async {
+  final subjectId = await saveDataToDB();  // ✅ 이것만 선언!
+  if (subjectId == null || !context.mounted) {
+    print("❌ subjectId 없음 → AI 실행 취소");
+    return;
+  }
+
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('accessToken');
+  if (token == null) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const AlertDialog(
+      title: Text('AI 실행 중'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('AI가 계획을 생성하는 중입니다...'),
+          SizedBox(height: 20),
+          CircularProgressIndicator(),
+        ],
+      ),
+    ),
+  );
+
+  final response = await http.post(
+    Uri.parse('http://3.107.195.136:8000/plan/schedule?subject_id=$subjectId'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+  );
+
+  Navigator.of(context).pop();
+
+  if (response.statusCode == 200 && context.mounted) {
+    Navigator.pushReplacementNamed(context, '/home');
+  } else if (context.mounted) {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        title: Text('AI 실행 중'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('AI가 계획을 생성하는 중입니다...'),
-            SizedBox(height: 20),
-            CircularProgressIndicator(),
-          ],
-        ),
+      builder: (_) => AlertDialog(
+        title: const Text('실패'),
+        content: Text('AI 계획 생성 실패: ${response.body}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
+        ],
       ),
     );
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken');
-    if (token == null) return;
-
-    final response = await http.post(
-      Uri.parse('http://3.107.195.136:8000/plan/schedule'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    Navigator.of(context).pop();
-
-    if (response.statusCode == 200 && context.mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('실패'),
-          content: Text('AI 계획 생성 실패: ${response.body}'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
-          ],
-        ),
-      );
-    }
   }
+}
 
   Future<void> deleteAllStudyData() async {
     final prefs = await SharedPreferences.getInstance();

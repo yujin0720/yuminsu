@@ -2,6 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+
+from services.schedule_plans import run_schedule_for_user
 from db import get_db
 from models import plan as plan_model, subject as subject_model, timer as timer_model, user as user_model
 from pydantic import BaseModel
@@ -16,6 +18,28 @@ from services.schedule_plans import run_schedule_for_user as assign_plan_dates
 from services.ai_planner import generate_and_save_plans  
 
 router = APIRouter()
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+from db import get_db
+import os
+
+# .env에서 불러오는 시크릿 키와 알고리즘
+SECRET_KEY = os.getenv("SECRET_KEY", "default_secret")  # .env에 SECRET_KEY 값이 있어야 함
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+def get_current_user_id(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> int:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Token payload에 user_id가 없습니다.")
+        return user_id
+    except JWTError:
+        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
 
 
 # ---------------------- 모델 ---------------------- #
@@ -263,25 +287,29 @@ def get_weekly_grouped_plans(
 
 from services.ai_planner import generate_and_save_plans
 from services.schedule_plans import run_schedule_for_user as assign_plan_dates
-
 @router.post("/schedule")
 def schedule_ai_plan(
+    subject_id: int = Query(...),
     db: Session = Depends(get_db),
     current_user: user_model.User = Depends(get_current_user)
 ):
     try:
-        subjects = db.query(subject_model.Subject).filter(subject_model.Subject.user_id == current_user.user_id).all()
-        if not subjects:
-            return {"warning": "과목이 없습니다."}
+        # 선택된 subject_id에 해당하는 과목만 조회
+        subject = db.query(subject_model.Subject).filter(
+            subject_model.Subject.user_id == current_user.user_id,
+            subject_model.Subject.subject_id == subject_id
+        ).first()
 
-        # 1. 계획 먼저 생성
-        for subject in subjects:
-            print(f"plan 생성: subject_id={subject.subject_id}")
-            generate_and_save_plans(current_user.user_id, subject.subject_id)
+        if not subject:
+            raise HTTPException(status_code=404, detail="해당 과목이 존재하지 않습니다.")
 
-        db.commit() 
+        # 1. 계획 생성
+        print(f"✅ AI 계획 생성 시작: user_id={current_user.user_id}, subject_id={subject_id}")
+        generate_and_save_plans(current_user.user_id, subject.subject_id)
 
-        # 2. 생성한 계획을 GPT로 날짜 배정
+        db.commit()
+
+        # 2. GPT 기반 날짜 자동 배정
         result = assign_plan_dates(current_user.user_id, db)
 
         if "error" in result:
@@ -295,8 +323,25 @@ def schedule_ai_plan(
         print("AI 계획 생성 중 오류:", e)
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail="AI 계획 생성 중 서버 오류 발생")
+@router.post("/calendar")
+def assign_calendar_dates(
+    current_user: user_model.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = current_user.user_id
+    print("✅ POST /plan/calendar 진입 성공 - user_id:", user_id)
 
+    plans = db.query(Plan).filter(Plan.user_id == user_id).all()
+    if not plans:
+        raise HTTPException(status_code=400, detail="계획이 존재하지 않습니다. 먼저 계획을 생성하세요.")
 
+    try:
+        result = run_schedule_for_user(user_id=user_id, db=db)
+        return {"message": "날짜 배정 완료", "result": result}
+    except Exception as e:
+        print("❌ 날짜 배정 중 오류:", e)
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"날짜 배정 중 오류 발생: {str(e)}")
 
 # ---------------------- 메인페이지 도넛 그래프 공부 달성도 ---------------------- #
 
