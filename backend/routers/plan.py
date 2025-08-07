@@ -382,26 +382,36 @@ def get_plan_stats(
 
 # ---------------------- 플랜 삭제 ---------------------- #
 
-
 @router.delete("/{plan_id}")
 def delete_plan(plan_id: int, request: Request, db: Session = Depends(get_db)):
-    token = request.headers.get("Authorization").split(" ")[1]
-    user_id = get_user_id_from_token(token)
+    try:
+        token = request.headers.get("Authorization").split(" ")[1]
+        user_id = get_user_id_from_token(token)
 
-    print(f" user_id from token: {user_id}")
-    print(f" plan_id: {plan_id}")
+        print(f"🧾 user_id from token: {user_id}")
+        print(f"🧾 plan_id: {plan_id}")
 
-    plan = db.query(Plan).filter(Plan.plan_id == plan_id, Plan.user_id == user_id).first()
+        plan = db.query(Plan).filter(
+            Plan.plan_id == plan_id,
+            Plan.user_id == user_id
+        ).first()
 
+        print(f"🧾 plan found? {plan is not None}")
 
-    print(f" plan found? {plan is not None}")
+        if not plan:
+            raise HTTPException(status_code=404, detail="해당 계획이 존재하지 않거나 권한이 없습니다.")
 
-    if not plan:
-        raise HTTPException(status_code=404, detail="해당 계획이 존재하지 않거나 권한이 없습니다.")
+        db.delete(plan)
+        db.commit()
+        print("✅ commit 완료")
 
-    db.delete(plan)
-    db.commit()
-    return {"message": f"Plan {plan_id} deleted"}
+        return {"message": f"Plan {plan_id} deleted"}
+
+    except Exception as e:
+        db.rollback()
+        print("❌ 삭제 중 오류 발생:", e)
+        raise HTTPException(status_code=500, detail="삭제 중 서버 오류 발생")
+
 @router.delete("/by-subject/{subject_id}")  # ✅ prefix가 이미 '/plan'임
 def delete_plans_by_subject(
     subject_id: int,

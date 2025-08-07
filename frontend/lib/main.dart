@@ -187,6 +187,13 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+
+ @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    Provider.of<TodoProvider>(context, listen: false).fetchTodosFromDB();
+    Provider.of<TodoProvider>(context, listen: false).fetchTodayTodosGrouped();
+  }
 Map<String, List<Map<String, dynamic>>> subjectGroups = {};
 
   List<Map<String, dynamic>> todayTodos = [];
@@ -867,7 +874,7 @@ Widget _buildTodoAndWeeklySection() {
                       // ✅ 2. 과목별 ExpansionTile 출력
                       ...subjectGroups.entries.map((entry) {
                         return ExpansionTile(
-                          title: Text(entry.key),
+                          title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
                           children: entry.value
                               .map((todo) => _buildStyledTodoTile(todo))
                               .toList(),
