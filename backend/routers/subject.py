@@ -134,4 +134,3 @@ def delete_single_subject(subject_id: int, request: Request, db: Session = Depen
     print(f"과목 삭제 완료: subject_id={subject_id}")
 
     return {"message": f"과목 및 관련 계획이 삭제되었습니다. (subject_id={subject_id})"}
-

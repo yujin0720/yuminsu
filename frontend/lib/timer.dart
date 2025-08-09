@@ -76,6 +76,7 @@ import 'package:provider/provider.dart';
 import 'timer_provider.dart';
 import 'package:capstone_edu_app/study_session.dart';
 
+
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
 
@@ -111,7 +112,7 @@ class _TimerPageState extends State<TimerPage> {
     final int rows = endHour - startHour;
     final int columns = 6; // 10분 단위
 
-    return SingleChildScrollView(
+      return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
         width: columns * cellWidth + 60,
@@ -193,106 +194,98 @@ class _TimerPageState extends State<TimerPage> {
           },
         ),
       ),
-    );
-  }
+     );
+       }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(title: const Text('타이머')),
-      body: Consumer<TimerProvider>(
-        builder: (context, timerProvider, _) {
-          final sessions = timerProvider.sessionList;
+      @override
+Widget build(BuildContext context) {
+  return Container(
+    color: Colors.grey[100],
+    child: Consumer<TimerProvider>(
+      builder: (context, timerProvider, _) {
+        final sessions = timerProvider.sessionList;
 
-          return Center( // 중앙 정렬
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720), // 화면 중앙에 너비 제한
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// 타이머 영역
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(2, 2),
-                            )
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 20),
-                            Text(
-                              timerProvider.formattedTime,
-                              style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 타이머 영역
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(2, 2)),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          Text(
+                            timerProvider.formattedTime,
+                            style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 20),
+                          IconButton(
+                            icon: Icon(
+                              timerProvider.isRunning ? Icons.pause : Icons.play_arrow,
+                              size: 48,
                             ),
-                            const SizedBox(height: 20),
-                            IconButton(
-                              icon: Icon(
-                                timerProvider.isRunning ? Icons.pause : Icons.play_arrow,
-                                size: 48,
-                              ),
-                              onPressed: () {
-                                if (timerProvider.isRunning) {
-                                  timerProvider.pause();
-                                } else {
-                                  timerProvider.start();
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
+                            onPressed: () {
+                              if (timerProvider.isRunning) {
+                                timerProvider.pause();
+                              } else {
+                                timerProvider.start();
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
+                  ),
 
-                    /// 타임 테이블 영역
-                    Expanded(
-                      flex: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "오늘의 공부 세션",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: sessions.isEmpty
-                                    ? const Center(child: Text("오늘 세션이 없습니다."))
-                                    : buildTimeGrid(sessions),
+                  // 타임 테이블 영역
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("오늘의 공부 세션", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              child: sessions.isEmpty
+                                  ? const Center(child: Text("오늘 세션이 없습니다."))
+                                  : buildTimeGrid(sessions),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

@@ -97,7 +97,7 @@ class TimerProvider extends ChangeNotifier {
     final accessToken = prefs.getString('accessToken');
     if (accessToken != null) {
       final response = await http.get(
-        Uri.parse('http://3.107.195.136:8000/timer/today'),
+        Uri.parse('http://localhost:8000/timer/today'),
         headers: {
           'Authorization': 'Bearer $accessToken',
         },
@@ -210,7 +210,7 @@ class TimerProvider extends ChangeNotifier {
       print('서버로 보낼 세션: $session');
 
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/timer/'),
+        Uri.parse('http://localhost:8000/timer/'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ class TimerProvider extends ChangeNotifier {
     final accessToken = prefs.getString('accessToken');
     if (accessToken == null) return;
 
-    final url = Uri.parse('http://3.107.195.136:8000/timer/weekly-by-day?week_offset=$weekOffset');
+    final url = Uri.parse('http://localhost:8000/timer/weekly-by-day?week_offset=$weekOffset');
 
     final response = await http.get(
       url,
@@ -287,7 +287,7 @@ class TimerProvider extends ChangeNotifier {
     final dateStr = date.toIso8601String().split('T')[0];
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/timer/sessions/$dateStr'),
+      Uri.parse('http://localhost:8000/timer/sessions/$dateStr'),
       headers: {
         'Authorization': 'Bearer $accessToken',
       },

@@ -41,7 +41,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (accessToken == null) return;
 
       final response = await http.get(
-        Uri.parse('http://3.107.195.136:8000/user/profile'),
+        Uri.parse('http://localhost:8000/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json; charset=UTF-8',
@@ -171,7 +171,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://3.107.195.136:8000/user/delete'),
+        Uri.parse('http://localhost:8000/user/delete'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',
@@ -291,7 +291,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     };
 
     await http.patch(
-      Uri.parse('http://3.107.195.136:8000/user/update'),
+      Uri.parse('http://localhost:8000/user/update'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
@@ -300,7 +300,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
 
     await http.patch(
-      Uri.parse('http://3.107.195.136:8000/user/profile-update'),
+      Uri.parse('http://localhost:8000/user/profile-update'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
@@ -315,7 +315,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final confirmPassword = confirmPwController.text.trim();
     if (newPassword.isNotEmpty && confirmPassword.isNotEmpty && newPassword == confirmPassword) {
       await http.patch(
-        Uri.parse('http://3.107.195.136:8000/user/change-password'),
+        Uri.parse('http://localhost:8000/user/change-password'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json',

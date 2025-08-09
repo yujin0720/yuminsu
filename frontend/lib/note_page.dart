@@ -66,8 +66,8 @@ class _NotePageState extends State<NotePage> {
   bool _isThumbnailVisible = true; // 상태 추가
 
   final String baseUrl = kIsWeb || Platform.isAndroid
-    ? 'http://3.107.195.136:8000'
-    : 'http://3.107.195.136:8000';
+    ? 'http://localhost:8000'
+    : 'http://localhost:8000';
 
   bool _isCapturing = false; // 중복 캡처 방지용
 

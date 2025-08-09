@@ -17,6 +17,7 @@ import 'mypage.dart';
 import 'timer.dart'; 
 import 'timer_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_scaffold.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() {
@@ -43,14 +44,9 @@ class StudyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const LoginPage(),
-        '/folder': (context) => FolderHomePage(),
-        '/home': (context) => const PageViewContainer(),
-        '/studyplan': (context) => const StudyPlanPage(),
-
-        '/submain': (context) => const SubMainPage(), // 서브메인
-        '/mypage': (context) => const MyPage(),       // 마이페이지
-        '/timer': (context) => const TimerPage(),     // 타이머
-         '/login': (context) => const LoginPage(),  // 로그인 페이지 등록
+        '/home': (context) => const AppScaffold(),
+        '/studyplan': (context) => const StudyPlanPage(), // 세부 화면만 남겨둠
+        '/login': (context) => const LoginPage(),
       },
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -187,6 +183,13 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+
+ @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    Provider.of<TodoProvider>(context, listen: false).fetchTodosFromDB();
+    Provider.of<TodoProvider>(context, listen: false).fetchTodayTodosGrouped();
+  }
 Map<String, List<Map<String, dynamic>>> subjectGroups = {};
 
   List<Map<String, dynamic>> todayTodos = [];
@@ -201,7 +204,7 @@ Map<String, List<Map<String, dynamic>>> subjectGroups = {};
   int weeklyMinutes = 0;
   Map<String, int> userStudyTime = {};
 
-  final String baseUrl = 'http://3.107.195.136:8000';
+  final String baseUrl = 'http://localhost:8000';
 void _showAddPersonalScheduleDialog() {
   final TextEditingController titleController = TextEditingController();
   DateTime selectedDate = _focusedDay;
@@ -321,7 +324,7 @@ Future<void> _submitPersonalSchedule(String title, DateTime date, Color color) a
     if (accessToken == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/timer/today'),
+      Uri.parse('http://localhost:8000/timer/today'),
       headers: {
         'Authorization': 'Bearer $accessToken',
       },
@@ -592,47 +595,39 @@ setState(() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Study Manager')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTodoAndWeeklySection(),
-            const SizedBox(height: 20),
- // 캘린더 상단 제목 + 버튼
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-      "📅 캘린더",
-      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-    ),
-    TextButton.icon(
-      onPressed: _showAddPersonalScheduleDialog,
-      icon: const Icon(Icons.add_circle_outline, size: 18),
-      label: const Text(
-        "개인일정 추가",
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-      ),
-    ),
-  ],
-),
-    const SizedBox(height: 12),
-
-    // 캘린더 카드
-    _buildTodoCard(
-      title: ' ',
-      child: _buildCalendar(),
-
-            ),
-          ],
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTodoAndWeeklySection(),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "📅 캘린더",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              TextButton.icon(
+                onPressed: _showAddPersonalScheduleDialog,
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text(
+                  "개인일정 추가",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildTodoCard(
+            title: ' ',
+            child: _buildCalendar(),
+          ),
+        ],
       ),
     );
   }
-
 
 
 
@@ -867,7 +862,7 @@ Widget _buildTodoAndWeeklySection() {
                       // ✅ 2. 과목별 ExpansionTile 출력
                       ...subjectGroups.entries.map((entry) {
                         return ExpansionTile(
-                          title: Text(entry.key),
+                          title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
                           children: entry.value
                               .map((todo) => _buildStyledTodoTile(todo))
                               .toList(),

@@ -88,7 +88,7 @@ class _SubMainPageState extends State<SubMainPage> {
     ),
 
                               IconButton(
-                                icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                                icon: const Icon(Icons.delete_forever, color: Color.fromARGB(222, 199, 0, 0)),
                                 onPressed: () => _confirmDeleteSubject(subject),
                               ),
                             ],
@@ -122,101 +122,121 @@ final String todoText = _extractPlanName(todoTextRaw);
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Checkbox(
+
+
+                                       Expanded(
+      child: Wrap(
+        spacing: 130,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+          Checkbox(
                                       value: isChecked,
                                       onChanged: (value) {
                                         todoProvider.toggleCheck(subject, i, value);
                                       },
                                     ),
                                     const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  todoText,
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: isChecked ? Colors.grey : Colors.black,
-                                                    decoration: isChecked ? TextDecoration.lineThrough : null,
-                                                  ),
-                                                ),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                                onPressed: () => _confirmDeletePlan(todoItem['plan_id']),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
-                                              const SizedBox(width: 6),
-                                              GestureDetector(
-                                                onTap: () async {
-                                                  final selectedDate = await showDatePicker(
-                                                    context: context,
-                                                    initialDate: DateTime.tryParse(planDate) ?? DateTime.now(),
-                                                    firstDate: DateTime(2020),
-                                                    lastDate: DateTime(2030),
-                                                  );
-                                                  if (selectedDate != null) {
-                                                    setState(() {
-                                                      todoItem['plan_date'] = selectedDate.toIso8601String().split('T')[0];
-                                                    });
-                                                  }
-                                                },
-                                                child: Text(planDate, style: const TextStyle(color: Colors.blueGrey)),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.access_time, size: 16, color: Colors.blueGrey),
-                                              const SizedBox(width: 6),
-                                              DropdownButton<int>(
-                                                value: planTime,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    todoItem['plan_time'] = value;
-                                                  });
-                                                },
-                                                items: [
-                                                  {'label': '5분', 'value': 5},
-                                                  {'label': '10분', 'value': 10},
-                                                  {'label': '20분', 'value': 20},
-                                                  {'label': '30분', 'value': 30},
-                                                  {'label': '40분', 'value': 40},
-                                                  {'label': '50분', 'value': 50},
-                                                  {'label': '1시간', 'value': 60},
-                                                  {'label': '1시간 10분', 'value': 70},
-                                                  {'label': '1시간 20분', 'value': 80},
-                                                  {'label': '1시간 30분', 'value': 90},
-                                                  {'label': '1시간 40분', 'value': 100},
-                                                  {'label': '1시간 50분', 'value': 110},
-                                                  {'label': '2시간', 'value': 120},
-                                                ].map((item) {
-                                                  return DropdownMenuItem<int>(
-                                                    value: item['value'] as int,
-                                                    child: Text(item['label'].toString()),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+          Text(
+            todoText,
+            style: TextStyle(
+              fontSize: 15,
+              color: isChecked ? Colors.grey : Colors.black,
+              decoration: isChecked ? TextDecoration.lineThrough : null,
+            ),
+          ),
+          ],
+              ),
+
+          // 날짜
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () async {
+                  final selectedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.tryParse(planDate) ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (selectedDate != null) {
+                    setState(() {
+                      todoItem['plan_date'] = selectedDate.toIso8601String().split('T')[0];
+                    });
+                  }
+                },
+                child: Text(planDate, style: const TextStyle(color: Colors.blueGrey)),
+              ),
+            ],
+          ),
+
+          // 시간
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(20), // ✅ 둥글게
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: planTime,
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
+
+                  icon: const Icon(Icons.expand_more, size: 16),
+                  onChanged: (value) {
+                    setState(() {
+                      todoItem['plan_time'] = value;
+                    });
+                  },
+                  items: [
+                    {'label': '5분', 'value': 5},
+                    {'label': '10분', 'value': 10},
+                    {'label': '20분', 'value': 20},
+                    {'label': '30분', 'value': 30},
+                    {'label': '40분', 'value': 40},
+                    {'label': '50분', 'value': 50},
+                    {'label': '1시간', 'value': 60},
+                    {'label': '1시간 10분', 'value': 70},
+                    {'label': '1시간 20분', 'value': 80},
+                    {'label': '1시간 30분', 'value': 90},
+                    {'label': '1시간 40분', 'value': 100},
+                    {'label': '1시간 50분', 'value': 110},
+                    {'label': '2시간', 'value': 120},
+                  ].map((item) {
+                    return DropdownMenuItem<int>(
+                      value: item['value'] as int,
+                      child: Text(item['label'].toString()),
+                           );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+    // ✅ 항상 맨 오른쪽에 붙는 삭제 버튼
+    IconButton(
+      icon: const Icon(Icons.delete_outline, color: Colors.grey),
+      onPressed: () => _confirmDeletePlan(todoItem['plan_id']),
+    ),
+  ],
+),
+
                                 ),
-                              ),
-                            );
+                              );
                           }).toList(),
                         ),
                       );
@@ -231,24 +251,21 @@ final String todoText = _extractPlanName(todoTextRaw);
                             onPressed: _handleScheduleAI,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF004377),
-                              side: const BorderSide(color: Color(0xFF004377), width: 2),
-                              minimumSize: const Size(300, 50),
+                              side: const BorderSide(color: Color(0xFF004377), width: 0.8),
+                              minimumSize: const Size(260, 50),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                             ),
                           ),
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: 300,
-                            height: 50,
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.edit_note),
-                              label: const Text('과목 추가 및 수정', style: TextStyle(fontWeight: FontWeight.bold)),
-                              onPressed: () => Navigator.pushNamed(context, '/studyplan'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF004377),
-                                side: const BorderSide(color: Color(0xFF004377), width: 2),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-                              ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.edit_note, color: Colors.white),
+                            label: const Text('과목 추가 및 수정', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white,)),
+                            onPressed: () => Navigator.pushNamed(context, '/studyplan'),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(217, 0, 67, 119),
+                              side: const BorderSide(color: Color(0xFF004377), width: 0.8),
+                              minimumSize: const Size(260, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
                             ),
                           ),
                         ],
@@ -284,7 +301,7 @@ final String todoText = _extractPlanName(todoTextRaw);
 
       if (token != null && subjectId != null) {
         final response = await http.delete(
-          Uri.parse('http://3.107.195.136:8000/subject/$subjectId'),
+          Uri.parse('http://localhost:8000/subject/$subjectId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
@@ -301,7 +318,7 @@ final String todoText = _extractPlanName(todoTextRaw);
     }
   }
 
-  Future<void> _confirmDeletePlan(int planId) async {
+    Future<void> _confirmDeletePlan(int planId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -320,7 +337,7 @@ final String todoText = _extractPlanName(todoTextRaw);
 
       if (token != null) {
         final response = await http.delete(
-          Uri.parse('http://3.107.195.136:8000/plan/$planId'),
+          Uri.parse('http://localhost:8000/plan/$planId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
@@ -340,7 +357,8 @@ final String todoText = _extractPlanName(todoTextRaw);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로그인이 필요합니다.')));
       return;
     }
 
@@ -361,19 +379,25 @@ final String todoText = _extractPlanName(todoTextRaw);
     );
 
     try {
+      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
+      final firstSubjectKey = todoProvider.weeklyTodos.keys.first;
+      final subjectId = todoProvider.subjectIds[firstSubjectKey] ?? 0;
+
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/plan/schedule'),
+        Uri.parse('http://localhost:8000/plan/calendar'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
         },
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context); // 다이얼로그 닫기
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI 학습 계획이 성공적으로 저장되었습니다!')));
-        final provider = Provider.of<TodoProvider>(context, listen: false);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('AI 학습 계획이 성공적으로 저장되었습니다!')));
+        final provider =
+            Provider.of<TodoProvider>(context, listen: false);
         await provider.fetchTodosFromDB();
         provider.syncCheckedWithTodos();
         setState(() {
@@ -382,11 +406,13 @@ final String todoText = _extractPlanName(todoTextRaw);
           }
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류 발생: ${response.body}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('오류 발생: ${response.body}')));
       }
     } catch (e) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('네트워크 오류: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('네트워크 오류: $e')));
     }
   }
 
@@ -412,7 +438,8 @@ final String todoText = _extractPlanName(todoTextRaw);
               icon: const Icon(Icons.add),
               label: const Text('과목 추가하러 가기'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 backgroundColor: const Color(0xFF004377),
                 foregroundColor: Colors.white,
                 textStyle: const TextStyle(fontSize: 16),

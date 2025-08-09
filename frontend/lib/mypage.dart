@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'timer_provider.dart';
 import 'package:intl/intl.dart';
 
+
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
 
@@ -63,29 +64,24 @@ class _MyPageState extends State<MyPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F4F8),
-      appBar: AppBar(
-        title: const Text('마이 페이지', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
+@override
+Widget build(BuildContext context) {
+  return Container(
+    color: const Color(0xFFF2F4F8), // 기존 배경 유지
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildProfileCard(),
+          const SizedBox(height: 16),
+          _buildStudyTimeSection(),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileCard(),
-            const SizedBox(height: 16),
-            _buildStudyTimeSection(),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildProfileCard() {
     return Container(
@@ -312,7 +308,7 @@ Widget _buildStudyTimeSection() {
       if (accessToken == null) return;
 
       final response = await http.get(
-        Uri.parse('http://3.107.195.136:8000/user/profile'),
+        Uri.parse('http://localhost:8000/user/profile'),
         headers: {
           'Authorization': 'Bearer $accessToken',
           'Content-Type': 'application/json; charset=UTF-8',

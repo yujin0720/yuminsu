@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'dart:ui';
 
 class StudyPlanPage extends StatefulWidget {
   const StudyPlanPage({super.key});
@@ -53,7 +55,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/subject/list'),
+      Uri.parse('http://localhost:8000/subject/list'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -75,7 +77,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
+      Uri.parse('http://localhost:8000/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -94,16 +96,16 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
   });}
 }
 
- Future<void> saveDataToDB() async {
+Future<int?> saveDataToDB() async {
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('accessToken');
-  if (token == null) return;
+  if (token == null) return null;
 
   int? subjectId;
 
   if (isNewSubject) {
     final subjectResponse = await http.post(
-      Uri.parse('http://3.107.195.136:8000/subject/'),
+      Uri.parse('http://localhost:8000/subject/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -119,8 +121,9 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     if (subjectResponse.statusCode != 200) {
       print('❌ subject 생성 실패: ${subjectResponse.body}');
-      return;
+      return null;
     }
+
     subjectId = jsonDecode(subjectResponse.body)['subject_id'];
     print('✅ 새 과목 등록 완료 → subject_id: $subjectId');
   } else {
@@ -131,34 +134,30 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
 
     if (existing.isEmpty || existing['subject_id'] == null) {
       print('❗ 기존 과목 정보 없음 → 삭제 생략');
-      return;
+      return null;
     }
 
     subjectId = existing['subject_id'];
     print('🟡 기존 과목 ID: $subjectId');
 
     // Plan 삭제
-    final planDeleteResponse = await http.delete(
-      Uri.parse('http://3.107.195.136:8000/plan/by-subject/$subjectId'),
+    await http.delete(
+      Uri.parse('http://localhost:8000/plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    print('🧹 [DELETE] /plan/by-subject/$subjectId → ${planDeleteResponse.statusCode}');
-    print('➡️ response: ${planDeleteResponse.body}');
 
     // RowPlan 삭제
-    final rowPlanDeleteResponse = await http.delete(
-      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
+    await http.delete(
+      Uri.parse('http://localhost:8000/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    print('🧹 [DELETE] /row-plan/by-subject/$subjectId → ${rowPlanDeleteResponse.statusCode}');
-    print('➡️ response: ${rowPlanDeleteResponse.body}');
   }
 
   // row_plan 등록
   for (int i = 0; i < studyMaterials.length; i++) {
     final material = studyMaterials[i];
-    final res = await http.post(
-      Uri.parse('http://3.107.195.136:8000/row-plan/'),
+    await http.post(
+      Uri.parse('http://localhost:8000/row-plan/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -172,61 +171,65 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
         'plan_time': material['plan_time'],
       }),
     );
-
-    print('📦 [POST] row-plan: ${material['row_plan_name']} → status: ${res.statusCode}');
   }
+
+  return subjectId;
 }
 
 
-  Future<void> saveAndRunAIAndMove() async {
-    await saveDataToDB();
-    if (!context.mounted) return;
 
+  Future<void> saveAndRunAIAndMove() async {
+  final subjectId = await saveDataToDB();  // ✅ 이것만 선언!
+  if (subjectId == null || !context.mounted) {
+    print("❌ subjectId 없음 → AI 실행 취소");
+    return;
+  }
+
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('accessToken');
+  if (token == null) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const AlertDialog(
+      title: Text('AI 실행 중'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('AI가 계획을 생성하는 중입니다...'),
+          SizedBox(height: 20),
+          CircularProgressIndicator(),
+        ],
+      ),
+    ),
+  );
+
+  final response = await http.post(
+    Uri.parse('http://localhost:8000/plan/schedule?subject_id=$subjectId'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+  );
+
+  Navigator.of(context).pop();
+
+  if (response.statusCode == 200 && context.mounted) {
+    Navigator.pushReplacementNamed(context, '/home');
+  } else if (context.mounted) {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        title: Text('AI 실행 중'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('AI가 계획을 생성하는 중입니다...'),
-            SizedBox(height: 20),
-            CircularProgressIndicator(),
-          ],
-        ),
+      builder: (_) => AlertDialog(
+        title: const Text('실패'),
+        content: Text('AI 계획 생성 실패: ${response.body}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
+        ],
       ),
     );
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken');
-    if (token == null) return;
-
-    final response = await http.post(
-      Uri.parse('http://3.107.195.136:8000/plan/schedule'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    Navigator.of(context).pop();
-
-    if (response.statusCode == 200 && context.mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (context.mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('실패'),
-          content: Text('AI 계획 생성 실패: ${response.body}'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('확인')),
-          ],
-        ),
-      );
-    }
   }
+}
 
   Future<void> deleteAllStudyData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -234,7 +237,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.delete(
-      Uri.parse('http://3.107.195.136:8000/subject/delete-all'),
+      Uri.parse('http://localhost:8000/subject/delete-all'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -244,6 +247,20 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
       });
     }
   }
+
+   Widget _buildDropdownContainer({required Widget child}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: Colors.grey.shade300),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: child,
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -403,99 +420,121 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
                       ),
                       const SizedBox(height: 16),
 
-                      //자료명
-                      TextField(
-                        controller: materialNameController,
-                        decoration: const InputDecoration(
-                          labelText: '자료명',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                        ),
-                      ),
+                    Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // 📚 자료명 텍스트필드
+    TextField(
+      controller: materialNameController,
+      decoration: const InputDecoration(
+        labelText: '자료명과 범위',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+    ),
+    const SizedBox(height: 16),
 
-                      const SizedBox(height: 16),
+    // 드롭다운들 한 줄
+    SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 자료 유형
+          _buildDropdownContainer(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedType,
+                items: ['책', '인강', '직접입력']
+                    .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                    .toList(),
+                onChanged: (value) => setState(() => selectedType = value!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
 
-                      //자료 유형 + 직접입력
-                      Row(
-                        children: [
-                          DropdownButton<String>(
-                            value: selectedType,
-                            items: ['책', '인강', '직접입력']
-                                .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                                .toList(),
-                            onChanged: (value) => setState(() => selectedType = value!),
-                          ),
-                          const SizedBox(width: 12),
-                          if (selectedType == '직접입력')
-                            Expanded(
-                              child: TextField(
-                                controller: customTypeController,
-                                decoration: const InputDecoration(
-                                  labelText: '유형 입력',
-                                  border: OutlineInputBorder(),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+          // 직접입력
+          if (selectedType == '직접입력')
+            SizedBox(
+              width: 120,
+              child: TextField(
+                controller: customTypeController,
+                decoration: const InputDecoration(
+                  labelText: '유형 입력',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+              ),
+            ),
 
-                      const SizedBox(height: 16),
+          if (selectedType != '직접입력') const SizedBox(width: 12),
 
-                      //반복 횟수 + 예상 시간
-                      Row(
-                        children: [
-                          const Text('반복 횟수:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: repeatCount,
-                            items: List.generate(10, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}회'))),
-                            onChanged: (val) => setState(() => repeatCount = val!),
-                          ),
-                          const SizedBox(width: 24),
-                          const Text('예상 시간:'),
-                          const SizedBox(width: 8),
-                          DropdownButton<int>(
-                            value: selectedTime,
-                            items: timeOptions.map((opt) {
-                              return DropdownMenuItem<int>(
-                                value: opt['value'] as int,
-                                child: Text(opt['label']),
-                              );
-                            }).toList(),
-                            onChanged: (val) => setState(() => selectedTime = val!),
-                          ),
-                        ],
-                      ),
+          // 반복 횟수
+          _buildDropdownContainer(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: repeatCount,
+                items: List.generate(
+                  10,
+                  (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}회')),
+                ),
+                onChanged: (val) => setState(() => repeatCount = val!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
 
-                      const SizedBox(height: 24),
+          // 예상 시간
+          _buildDropdownContainer(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: selectedTime,
+                items: timeOptions.map((opt) {
+                  return DropdownMenuItem<int>(
+                    value: opt['value'] as int,
+                    child: Text(opt['label']),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => selectedTime = val!),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
 
-                      // 가운데 버튼
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            final type = selectedType == '직접입력' ? customTypeController.text : selectedType;
-                            setState(() {
-                              studyMaterials.add({
-                                'row_plan_name': materialNameController.text,
-                                'type': type,
-                                'repetition': repeatCount,
-                                'plan_time': selectedTime,
-                              });
-                              materialNameController.clear();
-                              customTypeController.clear();
-                              selectedType = '책';
-                              repeatCount = 1;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF004377),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          ),
-                          child: const Text('자료 추가'),
-                        ),
-                      ),
+    const SizedBox(height: 20),
+
+    // 🔘 자료추가 버튼
+    Center(
+      child: ElevatedButton(
+        onPressed: () {
+          final type = selectedType == '직접입력' ? customTypeController.text : selectedType;
+          setState(() {
+            studyMaterials.add({
+              'row_plan_name': materialNameController.text,
+              'type': type,
+              'repetition': repeatCount,
+              'plan_time': selectedTime,
+            });
+            materialNameController.clear();
+            customTypeController.clear();
+            selectedType = '책';
+            repeatCount = 1;
+          });
+        },
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 13),
+          backgroundColor: const Color(0xFF004377),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: const Text('자료추가', style: TextStyle(fontSize: 16, color: Colors.white,)),
+      ),
+    ),
+  ],
+),
+
                       if (studyMaterials.isNotEmpty) ...[
                         const SizedBox(height: 24),
                         const Text(
@@ -631,16 +670,16 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
                 onPressed: () {
                   setState(() {
                     studyMaterials.removeAt(index);
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    }).toList(),
-  ),
-),
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
 
                       ],
 
@@ -655,24 +694,45 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
                   ElevatedButton(
                     onPressed: saveAndRunAIAndMove,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        side: const BorderSide( // 🔹 테두리 설정
+                          color: Color(0xFF004377),
+                          width: 1.5,
+                        ),
+                      ),
                     ),
-                    child: const Text('저장하기', style: TextStyle(fontSize: 16)),
+                    child: const Text('저장하기', style: TextStyle(fontSize: 16,
+                    color: Color(0xFF004377),
+                    ),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: deleteAllStudyData,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      backgroundColor: Colors.white, // 🔸 배경: 흰색
+                      padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        side: const BorderSide(
+                          color: Color(0xFFB00020), // 🔸 테두리: 어두운 빨간색
+                          width: 1.5,
+                        ),
+                      ),
                     ),
-                    child: const Text('삭제하기', style: TextStyle(fontSize: 16)),
+                    child: const Text(
+                      '삭제하기',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFFB00020), // 🔸 글씨: 어두운 빨간색
+                       ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 40),
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
             ],
           ),
         ),

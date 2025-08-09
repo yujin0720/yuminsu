@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'note_list_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class FolderHomePage extends StatefulWidget {
   const FolderHomePage({super.key});
 
@@ -19,6 +20,140 @@ class _FolderHomePageState extends State<FolderHomePage> {
   List<Map<String, dynamic>> folders = [];
   List<bool> isEditing = [];
   List<TextEditingController> controllers = [];
+
+void _openChat() {
+  final controller = TextEditingController();
+  final scroll = ScrollController();
+  final messages = <_ChatMsg>[
+    _ChatMsg(role: 'assistant', text: '무엇을 도와드릴까요? PDF나 폴더 관련해서 물어보세요!'),
+  ];
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom, // 키보드
+        ),
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
+            void send() {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              setModalState(() {
+                messages.add(_ChatMsg(role: 'user', text: text));
+                controller.clear();
+              });
+              // 🔧 추후 RAG 연동 위치
+              Future.delayed(const Duration(milliseconds: 300), () {
+                setModalState(() {
+                  messages.add(_ChatMsg(role: 'assistant', text: '좋아요! (지금은 UI 데모 응답입니다)'));
+                  scroll.animateTo(
+                    scroll.position.maxScrollExtent + 120,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                  );
+                });
+              });
+            }
+
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.65,
+              child: Column(
+                children: [
+                  // 헤더
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                    child: Row(
+                      children: [
+                        const Text('고객 문의 챗봇', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // 메시지 리스트
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scroll,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      itemCount: messages.length,
+                      itemBuilder: (context, i) {
+                        final m = messages[i];
+                        final isUser = m.role == 'user';
+                        return Align(
+                          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUser ? const Color(0xFF004377) : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              m.text,
+                              style: TextStyle(
+                                color: isUser ? Colors.white : Colors.black87,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // 입력 영역
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              hintText: '메시지를 입력하세요…',
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onSubmitted: (_) => send(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          onPressed: send,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
+
+
 
   @override
   void initState() {
@@ -45,7 +180,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders'),
+        Uri.parse('http://localhost:8000/pdf/folders'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -80,7 +215,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders'),
+        Uri.parse('http://localhost:8000/pdf/folders'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -109,7 +244,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.patch(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders/$folderId'),
+        Uri.parse('http://localhost:8000/pdf/folders/$folderId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -133,7 +268,7 @@ class _FolderHomePageState extends State<FolderHomePage> {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://3.107.195.136:8000/pdf/folders/$folderId'),
+        Uri.parse('http://localhost:8000/pdf/folders/$folderId'),
         headers: {'Authorization': 'Bearer $accessToken'},
       );
 
@@ -268,77 +403,55 @@ class _FolderHomePageState extends State<FolderHomePage> {
     );
   }
 
-  Drawer _buildDrawer() {
-    return Drawer(
-      backgroundColor: FolderHomePage.background,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const DrawerHeader(
-            child: Text(
-              '메뉴',
-              style: TextStyle(fontSize: 20, color: FolderHomePage.cobaltBlue),
+
+@override
+Widget build(BuildContext context) {
+  return Container(
+    color: const Color(0xFFFFFFFF), // 배경
+    child: Stack(
+      children: [
+        // 본문 그리드
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.count(
+            crossAxisCount: 4,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1,
+            children: List.generate(
+              folders.length,
+              (index) => _buildFolder(index),
             ),
           ),
-          ListTile(
-            title: const Text('PDF', style: TextStyle(color: FolderHomePage.cobaltBlue)),
-            onTap: () => Navigator.pushNamed(context, '/folder'),
-          ),
-          ListTile(
-            title: const Text('홈', style: TextStyle(color: FolderHomePage.cobaltBlue)),
-            onTap: () => Navigator.pushNamed(context, '/home'),
-          ),
-          ListTile(
-            title: const Text('AI 학습플래너', style: TextStyle(color: FolderHomePage.cobaltBlue)),
-            onTap: () => Navigator.pushNamed(context, '/submain'),
-          ),
-          ListTile(
-            title: const Text('스터디 타이머', style: TextStyle(color: FolderHomePage.cobaltBlue)),
-            onTap: () => Navigator.pushNamed(context, '/timer'),
-          ),
-          ListTile(
-            title: const Text('마이페이지', style: TextStyle(color: FolderHomePage.cobaltBlue)),
-            onTap: () => Navigator.pushNamed(context, '/mypage'),
-          ),
-        ],
+        ),
+        Positioned(
+        right: 16,
+        bottom: 88, // + 버튼보다 위로
+        child: FloatingActionButton(
+          heroTag: 'addFab', // ← 기존 + 버튼과 heroTag 다르게!
+          backgroundColor: Colors.white,
+          foregroundColor: FolderHomePage.cobaltBlue,
+          elevation: 3,
+          onPressed: _openChat, // ← 방금 만든 함수
+          child: const Icon(Icons.chat_bubble_outline),
+        ),
       ),
-    );
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: FolderHomePage.background,
-      appBar: AppBar(
-        title: const Text(
-          'iPlanner',
-          style: TextStyle(color: FolderHomePage.cobaltBlue),
-        ),
-        backgroundColor: FolderHomePage.background,
-        iconTheme: const IconThemeData(color: FolderHomePage.cobaltBlue),
-        elevation: 0,
-      ),
-      drawer: _buildDrawer(),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: 4,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1,
-          children: List.generate(
-            folders.length,
-            (index) => _buildFolder(index),
+        // 우하단 플로팅 버튼
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton(
+            backgroundColor: FolderHomePage.cobaltBlue,
+            onPressed: () => _showAddOptions(context),
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: FolderHomePage.cobaltBlue,
-        onPressed: () => _showAddOptions(context),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
+
 
   Widget _buildFolder(int index) {
     return GestureDetector(
@@ -379,4 +492,11 @@ class _FolderHomePageState extends State<FolderHomePage> {
       ),
     );
   }
+}
+
+// ▼ 파일 하단(클래스 밖) 아무 곳에 간단한 메시지 모델 추가
+class _ChatMsg {
+  final String role; // 'user' or 'assistant'
+  final String text;
+  _ChatMsg({required this.role, required this.text});
 }
