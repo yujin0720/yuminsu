@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'dart:convert';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'submain.dart';
@@ -17,16 +19,23 @@ import 'mypage.dart';
 import 'timer.dart'; 
 import 'timer_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'env.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // .env 불러오기
+  await dotenv.load(fileName: 'assets/.env');
+
+
+
+
   runApp(
-    // 변경 후
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TodoProvider()),
-        ChangeNotifierProvider(create: (_) => TimerProvider()), // 추가됨
-        // ChangeNotifierProvider(create: (_) => TodoProviderMain()),  // main.dart에서 사용
+        ChangeNotifierProvider(create: (_) => TimerProvider()),
+        // ChangeNotifierProvider(create: (_) => TodoProviderMain()),
       ],
       child: const StudyApp(),
     ),
@@ -208,7 +217,7 @@ Map<String, List<Map<String, dynamic>>> subjectGroups = {};
   int weeklyMinutes = 0;
   Map<String, int> userStudyTime = {};
 
-  final String baseUrl = 'http://3.107.195.136:8000';
+  final String baseUrl =  Env.baseUrl;
 void _showAddPersonalScheduleDialog() {
   final TextEditingController titleController = TextEditingController();
   DateTime selectedDate = _focusedDay;
@@ -301,7 +310,7 @@ Future<void> _submitPersonalSchedule(String title, DateTime date, Color color) a
   if (token == null) return;
 
   final res = await http.post(
-    Uri.parse('$baseUrl/personal-schedule/'),
+    Uri.parse('${Env.baseUrl}/personal-schedule/'),
     headers: {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -328,7 +337,7 @@ Future<void> _submitPersonalSchedule(String title, DateTime date, Color color) a
     if (accessToken == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/timer/today'),
+      Uri.parse('${Env.baseUrl}/timer/today'),
       headers: {
         'Authorization': 'Bearer $accessToken',
       },
@@ -387,7 +396,7 @@ Future<void> fetchTodayTodos() async {
   print('[TODAY] $today');
 
   // 1. 학습 계획 불러오기
-  final planRes = await http.get(Uri.parse('$baseUrl/plan/today?date=$today'), headers: headers);
+  final planRes = await http.get(Uri.parse('${Env.baseUrl}/plan/today?date=$today'), headers: headers);
   List<Map<String, dynamic>> plans = [];
 
   print('[Plan StatusCode] ${planRes.statusCode}');
@@ -401,7 +410,7 @@ Future<void> fetchTodayTodos() async {
   }
 
   // 2. 개인 일정 불러오기
-  final personalRes = await http.get(Uri.parse('$baseUrl/personal-schedule/today'), headers: headers);
+  final personalRes = await http.get(Uri.parse('${Env.baseUrl}/personal-schedule/today'), headers: headers);
   List<Map<String, dynamic>> personals = [];
 
   print('[Personal StatusCode] ${personalRes.statusCode}');
@@ -455,7 +464,7 @@ setState(() {
     // 수정된 코드 ↓ (오늘부터 7일 후까지)
     final start = now;
     final end = now.add(const Duration(days: 6));
-    final res = await http.get(Uri.parse('$baseUrl/plan/weekly?start=${DateFormat('yyyy-MM-dd').format(start)}&end=${DateFormat('yyyy-MM-dd').format(end)}'), headers: headers);
+    final res = await http.get(Uri.parse('${Env.baseUrl}/plan/weekly?start=${DateFormat('yyyy-MM-dd').format(start)}&end=${DateFormat('yyyy-MM-dd').format(end)}'), headers: headers);
     if (res.statusCode == 200) {
       final decoded = utf8.decode(res.bodyBytes); // UTF-8 명시적 디코딩
       final List data = json.decode(decoded);
@@ -478,7 +487,7 @@ setState(() {
 
   Future<void> markComplete(int planId) async {
     final headers = await _headers();
-    await http.patch(Uri.parse('$baseUrl/plan/$planId/complete'), headers: headers);
+    await http.patch(Uri.parse('${Env.baseUrl}/plan/$planId/complete'), headers: headers);
     await fetchWeeklyTodos();
     await fetchTodayTodos();
   }
@@ -487,7 +496,7 @@ setState(() {
     final headers = await _headers();
 
     final res = await http.patch(
-      Uri.parse('$baseUrl/plan/$planId/complete'),
+      Uri.parse('${Env.baseUrl}/plan/$planId/complete'),
       headers: headers,
       body: json.encode({"complete": newValue}),
     );
@@ -511,8 +520,8 @@ setState(() {
 
   Future<void> fetchTimers() async {
     final headers = await _headers();
-    final todayRes = await http.get(Uri.parse('$baseUrl/timer/today'), headers: headers);
-    final weeklyRes = await http.get(Uri.parse('$baseUrl/timer/weekly'), headers: headers);
+    final todayRes = await http.get(Uri.parse('${Env.baseUrl}/timer/today'), headers: headers);
+    final weeklyRes = await http.get(Uri.parse('${Env.baseUrl}/timer/weekly'), headers: headers);
 
     if (todayRes.statusCode == 200 && weeklyRes.statusCode == 200) {
 
@@ -531,7 +540,7 @@ setState(() {
 
   Future<void> fetchUserStudyTime() async {
     final headers = await _headers();
-    final res = await http.get(Uri.parse('$baseUrl/user/study-time'), headers: headers);
+    final res = await http.get(Uri.parse('${Env.baseUrl}/user/study-time'), headers: headers);
     if (res.statusCode == 200) {
     final decoded = utf8.decode(res.bodyBytes);
       setState(() {
@@ -565,7 +574,7 @@ setState(() {
     for (var date in allDatesInMonth) {
       final formattedDate = formatter.format(date);
       final res = await http.get(
-        Uri.parse('$baseUrl/plan/by-date-with-subject?date=$formattedDate'),
+        Uri.parse('${Env.baseUrl}/plan/by-date-with-subject?date=$formattedDate'),
         headers: headers,
       );
 

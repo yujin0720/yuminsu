@@ -35,18 +35,15 @@ from utils.pdf_render import render_pdf_page
 import os
 import fitz  # PyMuPDF
 
-
 router = APIRouter(tags=["PDF"])
-
-
 
 
 # ✅ 1. 폴더 생성
 @router.post("/folders", response_model=PdfFolderOut)
 def create_pdf_folder(
-    folder: PdfFolderCreate,
-    request: Request,
-    db: Session = Depends(get_db)
+        folder: PdfFolderCreate,
+        request: Request,
+        db: Session = Depends(get_db)
 ):
     user_id = get_current_user_id(request)
     new_folder = Folder(name=folder.name, user_id=user_id)  # ✅ 수정
@@ -54,7 +51,7 @@ def create_pdf_folder(
     db.commit()
     db.refresh(new_folder)
     return new_folder  # 👉 FastAPI가 알아서 JSON으로 반환함 (utf-8 처리됨)
-    
+
 
 # ✅ 2. PDF 노트 생성 (빈 노트용)
 @router.post("/notes", response_model=PdfNoteOut)
@@ -131,7 +128,6 @@ def create_pdf_page(page: PdfPageCreate, db: Session = Depends(get_db)):
     return {"page_id": new_page.page_id}
 
 
-
 # ✅ 4. 필기 저장
 @router.post("/annotations", response_model=PdfAnnotationOut)
 def create_pdf_annotation(annotation: PdfAnnotationCreate, db: Session = Depends(get_db)):
@@ -146,17 +142,20 @@ def create_pdf_annotation(annotation: PdfAnnotationCreate, db: Session = Depends
     db.refresh(new_anno)
     return new_anno
 
+
 # ✅ 5. 특정 페이지 필기 불러오기
 @router.get("/annotations/{page_id}", response_model=list[PdfAnnotationOut])
 def get_annotations_by_page(page_id: int, db: Session = Depends(get_db)):
     annotations = db.query(PdfAnnotation).filter(PdfAnnotation.page_id == page_id).all()
     return annotations
 
+
 # ✅ 6. 특정 폴더의 PDF 목록 조회
 @router.get("/notes/{folder_id}", response_model=list[PdfNoteOut])
 def get_notes_by_folder(folder_id: int, db: Session = Depends(get_db)):
     notes = db.query(PdfNote).filter(PdfNote.folder_id == folder_id).all()
     return notes
+
 
 # ✅ 7. 특정 PDF의 페이지 목록 조회
 @router.get("/pages/{pdf_id}", response_model=list[PdfPageOut])
@@ -172,13 +171,14 @@ def get_folders(request: Request, db: Session = Depends(get_db)):
     folders = db.query(Folder).filter(Folder.user_id == user_id).all()
     return folders
 
+
 # ✅ 9. 폴더 이름 수정
 @router.patch("/folders/{folder_id}", response_model=PdfFolderOut)
 def update_folder_name(
-    folder_id: int,
-    folder: PdfFolderCreate,  # folder.name 사용
-    request: Request,
-    db: Session = Depends(get_db)
+        folder_id: int,
+        folder: PdfFolderCreate,  # folder.name 사용
+        request: Request,
+        db: Session = Depends(get_db)
 ):
     user_id = get_current_user_id(request)
     target = db.query(Folder).filter(Folder.folder_id == folder_id, Folder.user_id == user_id).first()
@@ -193,15 +193,15 @@ def update_folder_name(
 # ✅ 10. 폴더 삭제
 @router.delete("/folders/{folder_id}", status_code=200)
 def delete_folder(
-    folder_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
+        folder_id: int,
+        request: Request,
+        db: Session = Depends(get_db)
 ):
     user_id = get_current_user_id(request)
     folder = db.query(Folder).filter(Folder.folder_id == folder_id, Folder.user_id == user_id).first()
     if not folder:
         raise HTTPException(status_code=404, detail="폴더를 찾을 수 없습니다.")
-    
+
     # PDF 노트, 페이지, 필기 등 자식 레코드도 제거 (옵션)
     db.query(PdfAnnotation).filter(PdfAnnotation.page_id.in_(
         db.query(PdfPage.page_id).filter(PdfPage.pdf_id.in_(
@@ -218,6 +218,7 @@ def delete_folder(
     db.commit()
     return {"message": "폴더가 삭제되었습니다."}
 
+
 # ✅ 11. 전체 pdf 노트에 대한 필기 일괄 조회
 @router.get("/annotations/by_pdf/{pdf_id}", response_model=list[PdfAnnotationOut])
 def get_annotations_by_pdf(pdf_id: int, db: Session = Depends(get_db)):
@@ -233,9 +234,9 @@ def get_annotations_by_pdf(pdf_id: int, db: Session = Depends(get_db)):
 # ✅ 12. pdf 썸네일 업로드
 @router.post("/thumbnails", response_model=dict)
 def upload_thumbnail(
-    page_id: int = Form(...),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+        page_id: int = Form(...),
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db)
 ):
     try:
         print(f"📩 썸네일 업로드 요청 도착 - page_id: {page_id}, filename: {file.filename}")
@@ -261,21 +262,18 @@ def upload_thumbnail(
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-    
-
-
 # ✅ 13. 필기 삭제
 @router.delete("/annotations/{page_id}")
 def delete_annotations_by_page(
-    page_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
+        page_id: int,
+        request: Request,
+        db: Session = Depends(get_db)
 ):
     user_id = get_current_user_id(request)
     page = db.query(PdfPage).filter(PdfPage.page_id == page_id).first()
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
-    
+
     note = db.query(PdfNote).filter(PdfNote.pdf_id == page.pdf_id).first()
     if note.user_id != user_id:
         raise HTTPException(status_code=403, detail="Permission denied")
@@ -364,13 +362,14 @@ def upload_pdf_file(
     db.commit()
     return new_note'''
 
+
 @router.post("/upload", response_model=PdfNoteOut)
 def upload_pdf_file(
-    title: str = Form(...),
-    folder_id: int = Form(None),
-    file: UploadFile = File(...),
-    request: Request = None,
-    db: Session = Depends(get_db),
+        title: str = Form(...),
+        folder_id: int = Form(None),
+        file: UploadFile = File(...),
+        request: Request = None,
+        db: Session = Depends(get_db),
 ):
     user_id = get_current_user_id(request)
 
@@ -423,7 +422,7 @@ def upload_pdf_file(
             page_aspect_ratio = round(width / height, 5) if height != 0 else None
             generate_thumbnail(pdf_save_path, i + 1, image_path)
         except Exception as e:
-            print(f"⚠️ 페이지 {i+1} 썸네일 생성 실패: {e}")
+            print(f"⚠️ 페이지 {i + 1} 썸네일 생성 실패: {e}")
             image_url = None
             page_aspect_ratio = None
 
@@ -476,7 +475,7 @@ def get_pdf_page_image(pdf_id: int, page_number: int, db: Session = Depends(get_
     pdf = db.query(PdfNote).filter(PdfNote.pdf_id == pdf_id).first()
     if not pdf:
         raise HTTPException(status_code=404, detail="PDF 노트를 찾을 수 없습니다.")
-    
+
     print(f"📂 Trying to open: {pdf.file_path}")  # 로그 추가
 
     # 절대경로 테스트
@@ -497,13 +496,12 @@ def get_pdf_page_image(pdf_id: int, page_number: int, db: Session = Depends(get_
     )
 
 
-
 # ✅ 16. PDF 노트 삭제 (노트 내 페이지, 필기 포함)
 @router.delete("/notes/{pdf_id}", status_code=200)
 def delete_pdf_note(
-    pdf_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
+        pdf_id: int,
+        request: Request,
+        db: Session = Depends(get_db)
 ):
     user_id = get_current_user_id(request)
 
@@ -528,13 +526,14 @@ def delete_pdf_note(
 
     return {"message": "PDF 노트가 삭제되었습니다."}
 
+
 # ✅ 17. 노트 다른 폴더로 이동
 @router.patch("/notes/{note_id}", response_model=PdfNoteOut)
 def update_note_folder(
-    note_id: int,
-    note_data: dict,  # 요청 바디에서 folder_id 받기
-    request: Request,
-    db: Session = Depends(get_db),
+        note_id: int,
+        note_data: dict,  # 요청 바디에서 folder_id 받기
+        request: Request,
+        db: Session = Depends(get_db),
 ):
     user_id = get_current_user_id(request)
 
