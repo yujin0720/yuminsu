@@ -30,7 +30,7 @@ class _StudyPreferencePageState extends State<StudyPreferencePage> {
   };
 
   Future<void> _submitPreferences() async {
-    final url = Uri.parse('http://3.107.195.136:8000/user/singup-study-time');
+    final url = Uri.parse('${Env.baseUrl}/user/singup-study-time');
 
     final Map<String, dynamic> body = {
       'login_id': widget.loginId,

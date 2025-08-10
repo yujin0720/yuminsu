@@ -55,7 +55,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/subject/list'),
+      Uri.parse('${Env.baseUrl}/subject/list'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -77,7 +77,7 @@ class _StudyPlanPageState extends State<StudyPlanPage> with TickerProviderStateM
     if (token == null) return;
 
     final response = await http.get(
-      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
+      Uri.parse('${Env.baseUrl}/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -105,7 +105,7 @@ Future<int?> saveDataToDB() async {
 
   if (isNewSubject) {
     final subjectResponse = await http.post(
-      Uri.parse('http://3.107.195.136:8000/subject/'),
+      Uri.parse('${Env.baseUrl}/subject/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -142,13 +142,13 @@ Future<int?> saveDataToDB() async {
 
     // Plan 삭제
     await http.delete(
-      Uri.parse('http://3.107.195.136:8000/plan/by-subject/$subjectId'),
+      Uri.parse('${Env.baseUrl}/plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     // RowPlan 삭제
     await http.delete(
-      Uri.parse('http://3.107.195.136:8000/row-plan/by-subject/$subjectId'),
+      Uri.parse('${Env.baseUrl}/row-plan/by-subject/$subjectId'),
       headers: {'Authorization': 'Bearer $token'},
     );
   }
@@ -157,7 +157,7 @@ Future<int?> saveDataToDB() async {
   for (int i = 0; i < studyMaterials.length; i++) {
     final material = studyMaterials[i];
     await http.post(
-      Uri.parse('http://3.107.195.136:8000/row-plan/'),
+      Uri.parse('${Env.baseUrl}/row-plan/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -206,7 +206,7 @@ Future<int?> saveDataToDB() async {
   );
 
   final response = await http.post(
-    Uri.parse('http://3.107.195.136:8000/plan/schedule?subject_id=$subjectId'),
+    Uri.parse('${Env.baseUrl}/plan/schedule?subject_id=$subjectId'),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -237,7 +237,7 @@ Future<int?> saveDataToDB() async {
     if (token == null) return;
 
     final response = await http.delete(
-      Uri.parse('http://3.107.195.136:8000/subject/delete-all'),
+      Uri.parse('${Env.baseUrl}/subject/delete-all'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

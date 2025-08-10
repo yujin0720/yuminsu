@@ -301,7 +301,7 @@ final String todoText = _extractPlanName(todoTextRaw);
 
       if (token != null && subjectId != null) {
         final response = await http.delete(
-          Uri.parse('http://3.107.195.136:8000/subject/$subjectId'),
+          Uri.parse('${Env.baseUrl}/subject/$subjectId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
@@ -337,7 +337,7 @@ final String todoText = _extractPlanName(todoTextRaw);
 
       if (token != null) {
         final response = await http.delete(
-          Uri.parse('http://3.107.195.136:8000/plan/$planId'),
+          Uri.parse('${Env.baseUrl}/plan/$planId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
@@ -384,7 +384,7 @@ final String todoText = _extractPlanName(todoTextRaw);
       final subjectId = todoProvider.subjectIds[firstSubjectKey] ?? 0;
 
       final response = await http.post(
-        Uri.parse('http://3.107.195.136:8000/plan/calendar'),
+        Uri.parse('${Env.baseUrl}/plan/calendar'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
