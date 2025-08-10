@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'signup_studytime.dart';
+import 'env.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});

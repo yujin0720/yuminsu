@@ -7,6 +7,7 @@ import 'mypage.dart'; // MyPageState 접근을 위해
 import 'main.dart';
 import 'package:provider/provider.dart'; 
 import 'package:capstone_edu_app/study_session.dart';
+import 'env.dart';
 
 
 class TimerProvider extends ChangeNotifier {

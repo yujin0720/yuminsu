@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'env.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});

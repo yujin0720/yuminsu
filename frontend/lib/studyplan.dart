@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:ui';
+import 'env.dart';
 
 class StudyPlanPage extends StatefulWidget {
   const StudyPlanPage({super.key});

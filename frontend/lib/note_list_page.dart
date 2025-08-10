@@ -5,6 +5,7 @@ import 'note_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_selector/file_selector.dart';
 import 'dart:io';  // File 객체 사용 (모바일에서만 필요)
+import 'env.dart';
 
 
 Map<int, List<Stroke>> pageStrokes = {};  // 썸네일 테스트용
