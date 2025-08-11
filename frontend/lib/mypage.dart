@@ -6,7 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'timer_provider.dart';
 import 'package:intl/intl.dart';
-import 'study_type_page.dart'; // 아현추가코드
+import 'study_type_page.dart';
+
+import 'open_notifications.dart';
+import 'notification_service.dart'; // 공용 알림 서비스(배지/목록/읽음)
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
@@ -22,14 +25,7 @@ class _MyPageState extends State<MyPage> {
   String phone = '';
   String password = '********';
 
-  void refreshActualStudyTimeFromOutside() async {
-    print("마이페이지 새로고침 호출됨");
-    await fetchUserProfile(); // 서버에서 계획 시간 다시 불러오기
-    setState(() {}); // UI 다시 그림
-  }
-
   DateTime selectedWeek = DateTime.now();
-
   final List<String> days = ['월', '화', '수', '목', '금', '토', '일'];
 
   Map<String, String> weeklyStudyTime = {
@@ -42,6 +38,83 @@ class _MyPageState extends State<MyPage> {
     '일': '',
   };
 
+  // ── 알림 팝오버 상태(홈과 동일 UX) ────────────────────────────────
+  final LayerLink _bellLink = LayerLink();
+  OverlayEntry? _notifOverlay;
+  bool _isPopoverOpen = false;
+
+  void _removeNotifPopover() {
+    _notifOverlay?.remove();
+    _notifOverlay = null;
+  }
+
+  void _toggleNotifPopover() {
+    if (_isPopoverOpen) {
+      _removeNotifPopover();
+      setState(() => _isPopoverOpen = false);
+      return;
+    }
+    _notifOverlay = _buildNotifPopover();
+    Overlay.of(context).insert(_notifOverlay!);
+    setState(() => _isPopoverOpen = true);
+
+    // 열 때 최신화
+    NotificationService.instance.fetchNotifications();
+  }
+
+  OverlayEntry _buildNotifPopover() {
+    return OverlayEntry(
+      builder:
+          (_) => Stack(
+            children: [
+              // 바깥 클릭 시 닫기
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    _removeNotifPopover();
+                    setState(() => _isPopoverOpen = false);
+                  },
+                ),
+              ),
+              // 아이콘 기준 팝오버
+              CompositedTransformFollower(
+                link: _bellLink,
+                showWhenUnlinked: false,
+                offset: const Offset(-340, 44), // 위치 미세조정 가능
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 360,
+                    maxHeight: 560,
+                  ),
+                  child: Material(
+                    elevation: 12,
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: _MyPageNotificationsPopoverBody(
+                      hostContext: context, // ✅ 페이지 컨텍스트 전달
+                      onClose: (bool refresh) async {
+                        _removeNotifPopover();
+                        setState(() => _isPopoverOpen = false);
+                        if (refresh) {
+                          await NotificationService.instance.fetchUnreadCount();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+  // ─────────────────────────────────────────────────────────
+
+  void refreshActualStudyTimeFromOutside() async {
+    await fetchUserProfile();
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,13 +125,15 @@ class _MyPageState extends State<MyPage> {
         listen: false,
       ).loadWeeklyStudyFromServer(); // 실제 공부시간
     });
+
+    // 알림 배지 초기 동기화
+    NotificationService.instance.fetchUnreadCount();
   }
 
-  /// ✅ 로그아웃 함수
+  /// 로그아웃
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
-
     if (mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
@@ -73,6 +148,63 @@ class _MyPageState extends State<MyPage> {
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 0,
+        actions: [
+          // 🔔 팝오버 + 배지
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CompositedTransformTarget(
+                link: _bellLink,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: NotificationService.instance.unreadCount,
+                  builder: (_, count, __) {
+                    final hasUnread = count > 0;
+                    return IconButton(
+                      tooltip: '알림',
+                      icon: Icon(
+                        hasUnread
+                            ? Icons
+                                .notifications // 꽉 찬 종
+                            : Icons.notifications_none, // 테두리 종
+                        color: Colors.black,
+                      ),
+                      onPressed: _toggleNotifPopover,
+                    );
+                  },
+                ),
+              ),
+              // 배지
+              Positioned(
+                right: 6,
+                top: 6,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: NotificationService.instance.unreadCount,
+                  builder: (_, count, __) {
+                    if (count <= 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -186,7 +318,7 @@ class _MyPageState extends State<MyPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ 주차 이동 버튼
+          // 주차 이동
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -197,8 +329,7 @@ class _MyPageState extends State<MyPage> {
                       const Duration(days: 7),
                     );
                   });
-
-                  int offset = _calculateWeekOffsetFromToday(selectedWeek);
+                  final offset = _calculateWeekOffsetFromToday(selectedWeek);
                   await Provider.of<TimerProvider>(
                     context,
                     listen: false,
@@ -211,10 +342,8 @@ class _MyPageState extends State<MyPage> {
                   final monday = selectedWeek.subtract(
                     Duration(days: selectedWeek.weekday - 1),
                   );
-                  final mondayText =
-                      '${monday.year}년 ${monday.month}월 ${monday.day}일 기준';
                   return Text(
-                    mondayText,
+                    '${monday.year}년 ${monday.month}월 ${monday.day}일 기준',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   );
                 },
@@ -224,8 +353,7 @@ class _MyPageState extends State<MyPage> {
                   setState(() {
                     selectedWeek = selectedWeek.add(const Duration(days: 7));
                   });
-
-                  int offset = _calculateWeekOffsetFromToday(selectedWeek);
+                  final offset = _calculateWeekOffsetFromToday(selectedWeek);
                   await Provider.of<TimerProvider>(
                     context,
                     listen: false,
@@ -243,7 +371,7 @@ class _MyPageState extends State<MyPage> {
           ),
           const SizedBox(height: 12),
 
-          // 목표 공부시간 테이블
+          // 목표 공부시간
           Table(
             border: TableBorder.symmetric(
               inside: BorderSide(color: Colors.grey.shade300),
@@ -252,16 +380,20 @@ class _MyPageState extends State<MyPage> {
             children: [
               TableRow(
                 children:
-                    days.map((day) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          day,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      );
-                    }).toList(),
+                    days
+                        .map(
+                          (day) => Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              day,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
               ),
               TableRow(
                 children:
@@ -291,11 +423,10 @@ class _MyPageState extends State<MyPage> {
           ),
           const SizedBox(height: 12),
 
-          // 실제 공부시간 테이블
+          // 실제 공부시간
           Consumer<TimerProvider>(
-            builder: (context, timerProvider, child) {
+            builder: (_, timerProvider, __) {
               final studyMap = timerProvider.weeklyStudy;
-
               return Table(
                 border: TableBorder.symmetric(
                   inside: BorderSide(color: Colors.grey.shade300),
@@ -304,18 +435,20 @@ class _MyPageState extends State<MyPage> {
                 children: [
                   TableRow(
                     children:
-                        days.map((day) {
-                          return Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              day,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+                        days
+                            .map(
+                              (day) => Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  day,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            )
+                            .toList(),
                   ),
                   TableRow(
                     children:
@@ -337,16 +470,13 @@ class _MyPageState extends State<MyPage> {
             },
           ),
 
-          const SizedBox(height: 24), // ✅ 버튼과의 간격
-          // ✅ 학습 유형 분석하기 버튼
+          const SizedBox(height: 24),
           Center(
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const StudyTypePage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const StudyTypePage()),
                 );
               },
               icon: const Icon(Icons.analytics),
@@ -381,7 +511,6 @@ class _MyPageState extends State<MyPage> {
     final startOfSelectedWeek = selected.subtract(
       Duration(days: selected.weekday - 1),
     );
-
     return startOfSelectedWeek.difference(startOfTodayWeek).inDays ~/ 7;
   }
 
@@ -418,12 +547,179 @@ class _MyPageState extends State<MyPage> {
           };
         });
       } else {
+        // ignore: avoid_print
         print('프로필 불러오기 실패: ${response.statusCode}, ${response.body}');
       }
     } catch (e) {
+      // ignore: avoid_print
       print('예외 발생: $e');
     }
   }
 }
 
 typedef MyPageState = _MyPageState;
+
+/// ─────────────────────────────────────────────────────────────
+/// 팝오버 본문 (마이페이지) — 전체보기 시 호스트 컨텍스트 사용
+/// ─────────────────────────────────────────────────────────────
+class _MyPageNotificationsPopoverBody extends StatelessWidget {
+  final void Function(bool refresh) onClose;
+  final BuildContext hostContext; // 페이지 컨텍스트
+
+  const _MyPageNotificationsPopoverBody({
+    super.key,
+    required this.onClose,
+    required this.hostContext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<AppNotification>>(
+      future: NotificationService.instance.fetchNotifications(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            width: 360,
+            height: 520,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return SizedBox(
+            width: 360,
+            height: 520,
+            child: Center(child: Text('불러오기 실패: ${snapshot.error}')),
+          );
+        }
+
+        final list = (snapshot.data ?? <AppNotification>[]);
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // 최신순
+
+        return SizedBox(
+          width: 360,
+          height: 520,
+          child: Column(
+            children: [
+              // 헤더
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    const Text(
+                      '알림',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () async {
+                        await NotificationService.instance.markAllAsRead();
+                        onClose(true);
+                      },
+                      icon: const Icon(Icons.done_all, size: 18),
+                      label: const Text('모두 읽음'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+
+              // 목록
+              Expanded(
+                child:
+                    list.isEmpty
+                        ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('알림이 없어요.'),
+                          ),
+                        )
+                        : ListView.separated(
+                          padding: EdgeInsets.zero,
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, i) {
+                            final n = list[i];
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              leading: Icon(
+                                n.isRead
+                                    ? Icons.notifications_none
+                                    : Icons.notifications,
+                                color:
+                                    n.isRead
+                                        ? Colors.grey
+                                        : const Color(0xFF004377),
+                              ),
+                              title: Text(
+                                n.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight:
+                                      n.isRead
+                                          ? FontWeight.w500
+                                          : FontWeight.w800,
+                                ),
+                              ),
+                              subtitle: Text(
+                                n.body,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing:
+                                  n.isRead
+                                      ? null
+                                      : const Icon(
+                                        Icons.brightness_1,
+                                        size: 8,
+                                        color: Colors.redAccent,
+                                      ),
+                              onTap: () async {
+                                if (!n.isRead) {
+                                  await NotificationService.instance.markAsRead(
+                                    n.id,
+                                  );
+                                }
+                                onClose(true); // 닫으면서 배지 갱신
+                              },
+                            );
+                          },
+                        ),
+              ),
+
+              // 하단 "전체 보기" — 팝오버 닫힌 다음 프레임에 페이지 컨텍스트로 이동
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    right: 8,
+                    left: 8,
+                    top: 6,
+                    bottom: 8,
+                  ),
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      onClose(false); // 먼저 팝오버 닫기
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        await openNotifications(hostContext);
+                        await NotificationService.instance.fetchUnreadCount();
+                      });
+                    },
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    label: const Text('전체 보기'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
