@@ -71,7 +71,7 @@ void _openChat() {
                     padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
                     child: Row(
                       children: [
-                        const Text('고객 문의 챗봇', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text('챗봇', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.close),

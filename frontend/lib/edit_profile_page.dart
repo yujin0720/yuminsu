@@ -17,6 +17,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController newPwController = TextEditingController();
   final TextEditingController confirmPwController = TextEditingController();
 
+
+  // ① 드롭다운 옵션(분 단위)
+final List<int> _timeMinutes = [
+  // 기본: 5~50분
+  5, 10, 20, 30, 40, 50,
+  // 1시간~2시간(120분)까지는 10분 간격 그대로
+  ...List<int>.generate(7, (i) => 60 + i * 10), // 60,70,80,90,100,110,120
+  // 2시간(120분) 이후~8시간(480분)까지는 30분 간격
+  ...List<int>.generate(((480 - 150) ~/ 30) + 1, (i) => 150 + i * 30), // 150..480
+];
+
+// ② 요일별 선택값 저장 (분) — 기본값 60분
+final Map<String, int> _selectedStudyTime = {
+  '월': 60, '화': 60, '수': 60, '목': 60, '금': 60, '토': 60, '일': 60,
+};
+
+// ③ 라벨 포맷터: 5분 / 1시간 / 1시간 30분
+String _formatMinutes(int m) {
+  if (m < 60) return '$m분';
+  final h = m ~/ 60;
+  final mm = m % 60;
+  return mm == 0 ? '${h}시간' : '${h}시간 ${mm}분';
+}
+
+// ④ 안전 변환(서버가 int/num/string 섞여 올 때 대비)
+int _toInt(dynamic v, {int fallback = 60}) {
+  if (v == null) return fallback;
+  if (v is int) return v;
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v) ?? fallback;
+  return fallback;
+}
+
+// 서버가 45 같은 '옵션에 없는 값'을 줄 때를 대비해 가장 가까운 값으로 스냅
+int _snapToClosest(int m) {
+  if (_timeMinutes.contains(m)) return m;
+  int best = _timeMinutes.first;
+  int bestDiff = (m - best).abs();
+  for (final v in _timeMinutes) {
+    final d = (m - v).abs();
+    if (d < bestDiff) { best = v; bestDiff = d; }
+  }
+  return best;
+}
+
+
+
+
+
   final List<String> days = ['월', '화', '수', '목', '금', '토', '일'];
   final Map<String, TextEditingController> preferredStudyTime = {
     '월': TextEditingController(),
@@ -55,13 +104,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
           nameController.text = data['profile']?['name'] ?? '';
           emailController.text = data['profile']?['email'] ?? '';
           phoneController.text = data['phone'] ?? '';
-          preferredStudyTime['월']!.text = '${data['study_time_mon'] ?? ''}';
-          preferredStudyTime['화']!.text = '${data['study_time_tue'] ?? ''}';
-          preferredStudyTime['수']!.text = '${data['study_time_wed'] ?? ''}';
-          preferredStudyTime['목']!.text = '${data['study_time_thu'] ?? ''}';
-          preferredStudyTime['금']!.text = '${data['study_time_fri'] ?? ''}';
-          preferredStudyTime['토']!.text = '${data['study_time_sat'] ?? ''}';
-          preferredStudyTime['일']!.text = '${data['study_time_sun'] ?? ''}';
+
+          // ⬇︎ 드롭다운 값 채우기 (분)
+          _selectedStudyTime['월'] = _snapToClosest(_toInt(data['study_time_mon']));
+          _selectedStudyTime['화'] = _snapToClosest(_toInt(data['study_time_tue']));
+          _selectedStudyTime['수'] = _snapToClosest(_toInt(data['study_time_wed']));
+          _selectedStudyTime['목'] = _snapToClosest(_toInt(data['study_time_thu']));
+          _selectedStudyTime['금'] = _snapToClosest(_toInt(data['study_time_fri']));
+          _selectedStudyTime['토'] = _snapToClosest(_toInt(data['study_time_sat']));
+          _selectedStudyTime['일'] = _snapToClosest(_toInt(data['study_time_sun']));
+
         });
       }
     } catch (e) {
@@ -111,33 +163,49 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildStudyTimeTable() {
+ Widget _buildStudyTimeTable() {
     return Column(
       children: [
+        // 요일 헤더
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: days.map((day) => Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text('$day', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w500)),
+              child: Text(
+                day,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
             ),
           )).toList(),
         ),
         const SizedBox(height: 8),
+
+        // 드롭다운 줄
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: days.map((day) => Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: TextField(
-                controller: preferredStudyTime[day],
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
+              child: DropdownButtonFormField<int>(
+                value: _selectedStudyTime[day],
+                isExpanded: true,
                 decoration: InputDecoration(
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                items: _timeMinutes
+                    .map((m) => DropdownMenuItem<int>(
+                          value: m,
+                          child: Text(_formatMinutes(m)),
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  if (val == null) return;
+                  setState(() => _selectedStudyTime[day] = val);
+                },
               ),
             ),
           )).toList(),
@@ -281,14 +349,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final updatePayload = {
       'phone': phoneController.text,
-      'study_time_mon': int.tryParse(preferredStudyTime['월']!.text) ?? 0,
-      'study_time_tue': int.tryParse(preferredStudyTime['화']!.text) ?? 0,
-      'study_time_wed': int.tryParse(preferredStudyTime['수']!.text) ?? 0,
-      'study_time_thu': int.tryParse(preferredStudyTime['목']!.text) ?? 0,
-      'study_time_fri': int.tryParse(preferredStudyTime['금']!.text) ?? 0,
-      'study_time_sat': int.tryParse(preferredStudyTime['토']!.text) ?? 0,
-      'study_time_sun': int.tryParse(preferredStudyTime['일']!.text) ?? 0,
+      'study_time_mon': _selectedStudyTime['월'] ?? 0,
+      'study_time_tue': _selectedStudyTime['화'] ?? 0,
+      'study_time_wed': _selectedStudyTime['수'] ?? 0,
+      'study_time_thu': _selectedStudyTime['목'] ?? 0,
+      'study_time_fri': _selectedStudyTime['금'] ?? 0,
+      'study_time_sat': _selectedStudyTime['토'] ?? 0,
+      'study_time_sun': _selectedStudyTime['일'] ?? 0,
     };
+
 
     await http.patch(
       Uri.parse('http://localhost:8000/user/update'),
