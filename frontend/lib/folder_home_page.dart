@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'note_list_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'env.dart';
+import 'utils/auth.dart' as auth;
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class FolderHomePage extends StatefulWidget {
   const FolderHomePage({super.key});
@@ -20,12 +21,12 @@ class _FolderHomePageState extends State<FolderHomePage> {
   List<Map<String, dynamic>> folders = [];
   List<bool> isEditing = [];
   List<TextEditingController> controllers = [];
-
 void _openChat() {
   final controller = TextEditingController();
   final scroll = ScrollController();
   final messages = <_ChatMsg>[
-    _ChatMsg(role: 'assistant', text: '무엇을 도와드릴까요? PDF나 폴더 관련해서 물어보세요!'),
+    _ChatMsg(role: 'assistant',  text: '업로드된 강의자료를 기반으로 답변해드려요.\n'
+          '공부하다가 모르는 게 생기면 편하게 물어보세요!',),
   ];
 
   showModalBottomSheet(
@@ -38,28 +39,58 @@ void _openChat() {
     builder: (context) {
       return Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom, // 키보드
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: StatefulBuilder(
           builder: (context, setModalState) {
-            void send() {
+            Future<void> send() async {
               final text = controller.text.trim();
               if (text.isEmpty) return;
+
+              // 1) 사용자 메시지 추가
               setModalState(() {
                 messages.add(_ChatMsg(role: 'user', text: text));
                 controller.clear();
               });
-              // 🔧 추후 RAG 연동 위치
-              Future.delayed(const Duration(milliseconds: 300), () {
-                setModalState(() {
-                  messages.add(_ChatMsg(role: 'assistant', text: '좋아요! (지금은 UI 데모 응답입니다)'));
-                  scroll.animateTo(
-                    scroll.position.maxScrollExtent + 120,
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                  );
-                });
+
+              // 스크롤 살짝 내리기
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (scroll.hasClients) {
+                scroll.animateTo(
+                  scroll.position.maxScrollExtent + 120,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
+              }
+
+              // 2) 로딩 플레이스홀더 추가
+              setModalState(() {
+                messages.add(_ChatMsg(role: 'assistant', text: '생각 중…'));
               });
+              final placeholderIndex = messages.length - 1;
+
+              // 3) API 호출 (플레이스홀더는 history에서 제외)
+              final historyForApi = List<_ChatMsg>.from(messages)
+                ..removeAt(placeholderIndex);
+              final reply = await _callChatbotApi(
+                text: text,
+                history: historyForApi,
+              );
+
+              // 4) 플레이스홀더를 실제 응답으로 교체
+              setModalState(() {
+                messages[placeholderIndex] = _ChatMsg(role: 'assistant', text: reply);
+              });
+
+              // 5) 다시 스크롤
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (scroll.hasClients) {
+                scroll.animateTo(
+                  scroll.position.maxScrollExtent + 120,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOut,
+                );
+              }
             }
 
             return SizedBox(
@@ -102,13 +133,20 @@ void _openChat() {
                               color: isUser ? const Color(0xFF004377) : Colors.grey[200],
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              m.text,
-                              style: TextStyle(
-                                color: isUser ? Colors.white : Colors.black87,
-                                fontSize: 14,
-                              ),
-                            ),
+                            child: MarkdownBody(
+  data: m.text,
+  styleSheet: MarkdownStyleSheet(
+    p: TextStyle(
+      color: isUser ? Colors.white : Colors.black87,
+      fontSize: 14,
+    ),
+    strong: TextStyle( // **굵게** 스타일
+      fontWeight: FontWeight.bold,
+      color: isUser ? Colors.white : Colors.black87,
+    ),
+  ),
+),
+
                           ),
                         );
                       },
@@ -169,13 +207,10 @@ void _openChat() {
     super.dispose();
   }
 
-  Future<String?> getAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('accessToken');
-  }
 
   Future<void> _fetchFolders() async {
-    final accessToken = await getAccessToken();
+    final accessToken = await auth.getAccessToken();
+
     if (accessToken == null) return;
 
     try {
@@ -211,7 +246,8 @@ void _openChat() {
 
   Future<void> _createFolder() async {
     final folderName = _generateUniqueFolderName();
-    final accessToken = await getAccessToken();
+    final accessToken = await auth.getAccessToken();
+
     if (accessToken == null) return;
 
     try {
@@ -240,7 +276,8 @@ void _openChat() {
   }
 
   Future<void> _renameFolder(int folderId, String newName) async {
-    final accessToken = await getAccessToken();
+    final accessToken = await auth.getAccessToken();
+
     if (accessToken == null) return;
 
     try {
@@ -264,7 +301,8 @@ void _openChat() {
   }
 
   Future<void> _deleteFolder(int folderId) async {
-    final accessToken = await getAccessToken();
+    final accessToken = await auth.getAccessToken();
+
     if (accessToken == null) return;
 
     try {
@@ -494,6 +532,51 @@ Widget build(BuildContext context) {
     );
   }
 }
+Future<String> _callChatbotApi({
+  required String text,
+  required List<_ChatMsg> history,
+}) async {
+  try {
+    final String? token = await auth.getAccessToken(); // ← 변수명 token으로 통일
+
+    final payload = {
+      'question': text,
+      'history': history
+          .map((m) => {'role': m.role, 'content': m.text})
+          .toList(),
+    };
+
+    final resp = await http.post(
+      Uri.parse('${Env.baseUrl}/api/chat'),
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (resp.statusCode == 200) {
+      final body = jsonDecode(utf8.decode(resp.bodyBytes));
+      if (body is Map && body.containsKey('answer')) {
+        return (body['answer'] as String?)?.trim().isNotEmpty == true
+            ? body['answer']
+            : '응답이 비어 있습니다.';
+      }
+      if (body is Map && body.containsKey('error')) {
+        return '서버 오류: ${body['error']}';
+      }
+      return '알 수 없는 응답 형식입니다.';
+    } else if (resp.statusCode == 401) {
+      return '인증 만료(401). 다시 로그인 해주세요.';
+    } else {
+      return '요청 실패(${resp.statusCode}): ${resp.body}';
+    }
+  } catch (e) {
+    return '요청 예외: $e';
+  }
+}
+
+
 
 // ▼ 파일 하단(클래스 밖) 아무 곳에 간단한 메시지 모델 추가
 class _ChatMsg {
