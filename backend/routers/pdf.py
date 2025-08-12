@@ -456,8 +456,8 @@ def upload_pdf_file(
         print(f"🔍 쪼갠 청크 수: {len(chunks)}")
 
         print("📌 임베딩 처리 중...")
-        embeddings = embed_chunks(chunks)
-        print(f"🔍 임베딩 완료: {len(embeddings)}개")
+        embeddings = embed_chunks(chunks)# 임베딩 + 저장만 수행
+        print(f"🔍 임베딩 완료: {len(chunks)}개")  # chunks 개수를 출력
 
         print("📌 벡터 DB 저장 중...")
         save_vector_db(embeddings, chunks)
