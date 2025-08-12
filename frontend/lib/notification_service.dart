@@ -23,17 +23,43 @@ class AppNotification {
     required this.isRead,
   });
 
+  // [MOD] 표시용 문구 정규화(더 공격적으로 적용)
   factory AppNotification.fromJson(Map<String, dynamic> j) {
     final isReadRaw = j['is_read'] ?? j['isRead'] ?? false;
+
+    final rawTitle = (j['title'] ?? '').toString();
+    final rawBody = (j['body'] ?? j['message'] ?? '').toString();
+
+    String title = rawTitle.trim();
+    String body = rawBody.trim();
+
+    // 1) "오늘 할당: XXX" 패턴이면 무조건 변환 + 제목도 통일
+    final alloc = RegExp(r'^\s*오늘\s*할당:\s*(.+)$');
+    final m = alloc.firstMatch(body);
+    if (m != null) {
+      final chunk = m.group(1)!.trim();
+      title = '오늘 학습 계획'; // [MOD]
+      body = '오늘은 $chunk 하는 날이에요!'; // [MOD]
+    } else {
+      // 2) 제목이 오늘 계획 계열이면 제목 통일 + 부드럽게 보정
+      final looksLikeTodayPlan =
+          title.contains('오늘 학습 계획') || title.contains('오늘 계획');
+      if (looksLikeTodayPlan) {
+        title = '오늘 학습 계획'; // [MOD]
+        if (!body.startsWith('오늘은')) {
+          body = '오늘은 $body';
+        }
+      }
+    }
+
     return AppNotification(
       id: (j['notification_id'] ?? j['id']) as int,
-      title: (j['title'] ?? '').toString(),
-      body:
-          (j['body'] ?? j['message'] ?? '').toString(), // ← body/message 모두 대응
+      title: title,
+      body: body,
       createdAt:
           DateTime.tryParse((j['created_at'] ?? j['createdAt']).toString()) ??
           DateTime.now(),
-      isRead: (isReadRaw == true || isReadRaw == 1), // ← 0/1, bool 모두 대응
+      isRead: (isReadRaw == true || isReadRaw == 1),
     );
   }
 }
@@ -137,5 +163,32 @@ class NotificationService {
       throw Exception('전체 읽음 처리 실패: ${res.statusCode} ${res.body}');
     }
     unreadCount.value = 0;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 알림 생성: POST /notifications/  (필드: title, body)
+  // ─────────────────────────────────────────────────────────
+  Future<void> createNotification({
+    required String title,
+    required String body,
+  }) async {
+    final headers = await _headers();
+    final uri = Uri.parse('$_baseUrl/notifications/'); // 슬래시 포함
+
+    final res = await http.post(
+      uri,
+      headers: headers,
+      body: jsonEncode({'title': title, 'body': body}),
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      debugPrint('알림 생성 실패: ${res.statusCode} ${res.body}');
+      return; // 실패해도 앱 흐름은 막지 않음
+    }
+  }
+
+  // (옵션) 바로 원하는 문구로 생성하는 헬퍼
+  Future<void> createPlanCreatedNotificationForChunk(String chunk) async {
+    await createNotification(title: '오늘 학습 계획', body: '오늘은 $chunk 하는 날이에요!');
   }
 }
